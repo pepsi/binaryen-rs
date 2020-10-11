@@ -21,6 +21,11 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 pub struct Literal{
     inner: BinaryenLiteral
 }
+impl Literal{
+    pub fn new(l: BinaryenLiteral) -> Self{
+        Self{inner: l}
+    }
+}
 #[derive(Debug)]
 pub struct Op {
     inner: BinaryenOp,
@@ -81,12 +86,12 @@ impl ExpressionRef {
 }
 #[derive(Debug)]
 pub struct Module {
-    inner: *mut BinaryenModule,
+    inner: BinaryenModuleRef,
 }
 impl Module {
     pub fn new() -> Self {
         return unsafe {
-            Module {
+            Self {
                 inner: BinaryenModuleCreate(),
             }
         };
@@ -159,6 +164,11 @@ impl Module {
     pub fn optimize(&mut self) {
         unsafe { BinaryenModuleOptimize(self.inner) }
     }
+    pub fn make_const(&mut self, value: Literal) -> ExpressionRef {
+        ExpressionRef::new( unsafe {
+            BinaryenConst(self.inner, value.inner)
+        })
+    }
 }
 impl Drop for Module{
     fn drop(&mut self) {
@@ -167,6 +177,14 @@ impl Drop for Module{
         }
     }
 }
+// pub struct ModuleRef{
+//     inner: BinaryenModuleRef
+// }
+// impl ModuleRef{
+//     fn new(x: BinaryenModuleRef) -> Self{
+//         Self{inner: x}
+//     }
+// }
 #[derive(Debug)]
 pub struct Type {
     inner: BinaryenType,
@@ -205,5 +223,11 @@ impl Type {
                 ),
             }
         };
+    }
+    
+}
+pub fn literal_int_32(x: i32) -> Literal{
+    unsafe {
+        Literal::new(BinaryenLiteralInt32(x))
     }
 }

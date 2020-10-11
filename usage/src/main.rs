@@ -2,7 +2,6 @@ use binaryen_rs;
 fn main() {
     let mut module = binaryen_rs::Module::new();
     
-
     {
         let params = binaryen_rs::Type::create(vec![
             binaryen_rs::Type::int_32(),
@@ -26,7 +25,7 @@ fn main() {
         let add = module.binary(binaryen_rs::Op::add_float_64(), lhs, rhs);
         module.add_function("add_f64", params, result, vec![], add);
     }
-{
+    {
         let params = binaryen_rs::Type::create(vec![
             binaryen_rs::Type::float_32(),
             binaryen_rs::Type::float_32(),
@@ -36,6 +35,16 @@ fn main() {
         let rhs = module.get_local(1, binaryen_rs::Type::float_32());
         let add = module.binary(binaryen_rs::Op::mul_float_32(), lhs, rhs);
         module.add_function("mul_f32", params, result, vec![], add);
+    }
+    {
+        let params = binaryen_rs::Type::create(vec![
+            binaryen_rs::Type::int_32(),
+        ]);
+        let result = binaryen_rs::Type::int_32();
+        let lhs = module.get_local(0, binaryen_rs::Type::int_32());
+        let rhs = module.make_const(binaryen_rs::literal_int_32(5));
+        let add = module.binary(binaryen_rs::Op::add_int_32(), lhs, rhs);
+        module.add_function("add_5", params, result, vec![], add);
     }
     assert!(module.validate(), "Module failed to validate!");
     // module.optimize();
