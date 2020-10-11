@@ -39,6 +39,7 @@ fn main() {
     }
     println!("Validation: {}", module.validate());
     // assert!(module.validate(), "Module failed to validate!");
+    module.optimize()
     module.print();
     // module.print_wat();
     // module.print_asmjs();

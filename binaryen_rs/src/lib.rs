@@ -65,7 +65,6 @@ impl Op {
     pub fn mul_float_64() -> Self {
         return unsafe { Self::new(BinaryenMulFloat64()) };
     }
-
 }
 #[derive(Debug)]
 pub struct ExpressionRef {
@@ -106,6 +105,9 @@ impl Module {
             ))
         }
     }
+    /*
+    Create new binary operation
+    */
     pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef {
         return unsafe {
             ExpressionRef::new(BinaryenBinary(
@@ -141,9 +143,17 @@ impl Module {
             );
         }
     }
-
-    pub fn validate(&mut self) -> i32 {
-        return unsafe {BinaryenModuleValidate(self.inner)}
+    // Bool whether the validation was successful
+    pub fn validate(&mut self) -> bool {
+        return unsafe { BinaryenModuleValidate(self.inner) == 1 };
+    }
+    // Incase you want to have the raw validation number.
+    pub fn validate_i(&mut self) -> i32 {
+        return unsafe { BinaryenModuleValidate(self.inner) };
+    }
+    // Optimis
+    pub fn optimize(&mut self) {
+        unsafe { BinaryenModuleOptimize(self.inner) }
     }
 }
 #[derive(Debug)]
