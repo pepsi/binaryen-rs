@@ -25,6 +25,7 @@ impl Op {
     pub fn new(op: BinaryenOp) -> Self {
         return Self { inner: op };
     }
+    // Potentially use macros for this?
 
     pub fn add_int_32() -> Self {
         return unsafe { Self::new(BinaryenAddInt32()) };
@@ -38,6 +39,20 @@ impl Op {
     pub fn add_float_64() -> Self {
         return unsafe { Self::new(BinaryenAddFloat64()) };
     }
+
+    pub fn sub_int_32() -> Self {
+        return unsafe { Self::new(BinaryenSubInt32()) };
+    }
+    pub fn sub_int_64() -> Self {
+        return unsafe { Self::new(BinaryenSubInt64()) };
+    }
+    pub fn sub_float_32() -> Self {
+        return unsafe { Self::new(BinaryenSubFloat32()) };
+    }
+    pub fn sub_float_64() -> Self {
+        return unsafe { Self::new(BinaryenSubFloat64()) };
+    }
+
 }
 #[derive(Debug)]
 pub struct ExpressionRef {
