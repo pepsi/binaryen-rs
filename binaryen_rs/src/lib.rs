@@ -156,6 +156,13 @@ impl Module {
         unsafe { BinaryenModuleOptimize(self.inner) }
     }
 }
+impl Drop for Module{
+    fn drop(&mut self) {
+        unsafe {
+            BinaryenModuleDispose(self.inner)
+        }
+    }
+}
 #[derive(Debug)]
 pub struct Type {
     inner: BinaryenType,
