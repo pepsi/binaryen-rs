@@ -16,7 +16,11 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 //         BinaryenLocalGet(self.module.inner, index.try_into().unwrap(), dype.inner)
 //     }
 // }
+// #[derive(Debug)]
 
+pub struct Literal{
+    inner: BinaryenLiteral
+}
 #[derive(Debug)]
 pub struct Op {
     inner: BinaryenOp,
@@ -203,29 +207,3 @@ impl Type {
         };
     }
 }
-
-// fn main() {
-// unsafe {
-//     let module = BinaryenModuleCreate();
-
-//     let mut ii = vec![BinaryenTypeInt32(), BinaryenTypeInt32()];
-//     let params = BinaryenTypeCreate(ii.as_mut_ptr(), 2);
-//     let result = BinaryenTypeInt32();
-//     let i = BinaryenConst(module, BinaryenLiteralInt32(0));
-//     let ptr = BinaryenLoad(module, 4, 0, 0, 0, BinaryenTypeInt32(), i);
-//     let mut list = vec![ptr];
-//     let blk = BinaryenBlock(module, 0 as *const i8, list.as_mut_ptr(), 1, result);
-//     let func = BinaryenAddFunction(
-//         module,
-//         CString::new("main").unwrap().as_ptr(),
-//         params,
-//         result,
-//         std::ptr::null_mut(),
-//         0,
-//         blk,
-//     );
-//     BinaryenModulePrint(module);
-//     println!("module = {:?}", module);
-// }
-// println!("Hello, world!");
-// }

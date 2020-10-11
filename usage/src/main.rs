@@ -37,12 +37,8 @@ fn main() {
         let add = module.binary(binaryen_rs::Op::mul_float_32(), lhs, rhs);
         module.add_function("mul_f32", params, result, vec![], add);
     }
-    println!("Validation: {}", module.validate());
-    // assert!(module.validate(), "Module failed to validate!");
-    module.optimize()
+    assert!(module.validate(), "Module failed to validate!");
+    // module.optimize();
     module.print();
-    // module.print_wat();
-    // module.print_asmjs();
-
     println!("Hello, world!");
 }
