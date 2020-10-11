@@ -54,17 +54,18 @@ impl Op {
     }
 
     pub fn mul_int_32() -> Self {
-        return unsafe { Self::new(BinaryenSubInt32()) };
+        return unsafe { Self::new(BinaryenMulInt32()) };
     }
     pub fn mul_int_64() -> Self {
-        return unsafe { Self::new(BinaryenSubInt64()) };
+        return unsafe { Self::new(BinaryenMulInt64()) };
     }
     pub fn mul_float_32() -> Self {
-        return unsafe { Self::new(BinaryenSubFloat32()) };
+        return unsafe { Self::new(BinaryenMulFloat32()) };
     }
     pub fn mul_float_64() -> Self {
-        return unsafe { Self::new(BinaryenSubFloat64()) };
+        return unsafe { Self::new(BinaryenMulFloat64()) };
     }
+
 }
 #[derive(Debug)]
 pub struct ExpressionRef {
