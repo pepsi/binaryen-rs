@@ -141,6 +141,10 @@ impl Module {
             );
         }
     }
+
+    pub fn validate(&mut self) -> i32 {
+        return unsafe {BinaryenModuleValidate(self.inner)}
+    }
 }
 #[derive(Debug)]
 pub struct Type {

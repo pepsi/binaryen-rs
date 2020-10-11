@@ -34,9 +34,11 @@ fn main() {
         let result = binaryen_rs::Type::float_32();
         let lhs = module.get_local(0, binaryen_rs::Type::float_32());
         let rhs = module.get_local(1, binaryen_rs::Type::float_32());
-        let add = module.binary(binaryen_rs::Op::mul_float_64(), lhs, rhs);
+        let add = module.binary(binaryen_rs::Op::mul_float_32(), lhs, rhs);
         module.add_function("mul_f32", params, result, vec![], add);
     }
+    println!("Validation: {}", module.validate());
+    // assert!(module.validate(), "Module failed to validate!");
     module.print();
     // module.print_wat();
     // module.print_asmjs();
