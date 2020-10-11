@@ -11,5 +11,8 @@ fn main() {
     let add = module.binary(binaryen_rs::Op::add_int_32(), lhs, rhs);
     module.add_function("add", ii, result, vec![], add);
     module.print();
+    module.print_wat();
+    module.print_asmjs();
+
     println!("Hello, world!");
 }

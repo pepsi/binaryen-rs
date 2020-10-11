@@ -53,6 +53,12 @@ impl Module {
     pub fn print(&mut self) {
         unsafe { BinaryenModulePrint(self.inner) }
     }
+    pub fn print_wat(&mut self) {
+        unsafe { BinaryenModulePrint(self.inner) }
+    }
+    pub fn print_asmjs(&mut self) {
+        unsafe { BinaryenModulePrintAsmjs(self.inner) }
+    }
     pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef {
         unsafe {
             ExpressionRef::new(BinaryenLocalGet(
