@@ -20,7 +20,7 @@ fn main() {
             binaryen_rs::Type::float_64(),
             binaryen_rs::Type::float_64(),
         ]);
-        let result = binaryen_rs::Type::int_32();
+        let result = binaryen_rs::Type::float_64();
         let lhs = module.get_local(0, binaryen_rs::Type::float_64());
         let rhs = module.get_local(1, binaryen_rs::Type::float_64());
         let add = module.binary(binaryen_rs::Op::add_float_64(), lhs, rhs);
