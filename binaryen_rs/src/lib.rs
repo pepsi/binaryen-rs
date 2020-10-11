@@ -25,8 +25,18 @@ impl Op {
     pub fn new(op: BinaryenOp) -> Self {
         return Self { inner: op };
     }
+
     pub fn add_int_32() -> Self {
         return unsafe { Self::new(BinaryenAddInt32()) };
+    }
+    pub fn add_int_64() -> Self {
+        return unsafe { Self::new(BinaryenAddInt64()) };
+    }
+    pub fn add_float_32() -> Self {
+        return unsafe { Self::new(BinaryenAddFloat32()) };
+    }
+    pub fn add_float_64() -> Self {
+        return unsafe { Self::new(BinaryenAddFloat64()) };
     }
 }
 #[derive(Debug)]
@@ -88,9 +98,9 @@ impl Module {
         body: ExpressionRef,
     ) {
         let mut inners = var_types
-        .iter()
-        .map(|t| t.inner)
-        .collect::<Vec<BinaryenType>>();
+            .iter()
+            .map(|t| t.inner)
+            .collect::<Vec<BinaryenType>>();
         unsafe {
             BinaryenAddFunction(
                 self.inner,
