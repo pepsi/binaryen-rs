@@ -77,6 +77,7 @@ fn main() {
     // assert!(module.validate(), "Module failed to validate!");
     module.optimize_with_level(3);
     module.print();
-    // module.print_asmjs();
+    module.write("../x")
+;    // module.print_asmjs();
     // println!("Hello, world!");
 }
