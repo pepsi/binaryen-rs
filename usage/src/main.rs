@@ -72,7 +72,7 @@ fn main() {
             final_block,
         );
         let exp = module.add_export("test", "test");
-        println!("{:?}", exp);
+        // println!("{:?}", exp);
     }
     // assert!(module.validate(), "Module failed to validate!");
     module.optimize_with_level(3);
