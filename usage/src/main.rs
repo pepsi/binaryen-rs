@@ -46,6 +46,28 @@ fn main() {
         let add = module.binary(binaryen_rs::Op::add_int_32(), lhs, rhs);
         module.add_function("add_5", params, result, vec![], add);
     }
+    {
+        let params = binaryen_rs::Type::create(vec![
+            binaryen_rs::Type::int_32(),
+            binaryen_rs::Type::int_32(),
+
+        ]);
+        let result = binaryen_rs::Type::int_32();
+        let mut bodies = vec![];
+        for i in 0..5{
+            let lhs = module.get_local(0, binaryen_rs::Type::int_32());
+            let rhs = module.get_local(1, binaryen_rs::Type::int_32());
+    
+            // let rhs = module.make_const(binaryen_rs::literal_int_32(5));
+            let add = module.binary(binaryen_rs::Op::add_int_32(), lhs, rhs);
+            let body: binaryen_rs::ExpressionRef = module.set_local(1, add);
+            let blk = module.new_nameless_block(vec![body], binaryen_rs::Type::none());
+            bodies.push(blk);
+        }
+        
+        let final_block = module.new_block("test", bodies, binaryen_rs::Type::none());
+        module.add_function("test", params, binaryen_rs::Type::none(), vec![binaryen_rs::Type::int_32()], final_block);
+    }
     assert!(module.validate(), "Module failed to validate!");
     // module.optimize();
     module.print();
