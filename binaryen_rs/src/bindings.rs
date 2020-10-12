@@ -98,13 +98,15 @@ pub type wchar_t = ::std::os::raw::c_int;
 #[repr(C)]
 #[repr(align(16))]
 #[derive(Debug, Copy, Clone)]
-pub struct max_align_t {
+pub struct max_align_t
+{
     pub __clang_max_align_nonce1: ::std::os::raw::c_longlong,
     pub __bindgen_padding_0: u64,
     pub __clang_max_align_nonce2: u128,
 }
 #[test]
-fn bindgen_test_layout_max_align_t() {
+fn bindgen_test_layout_max_align_t()
+{
     assert_eq!(
         ::std::mem::size_of::<max_align_t>(),
         32usize,
@@ -176,11 +178,13 @@ pub type __off64_t = ::std::os::raw::c_long;
 pub type __pid_t = ::std::os::raw::c_int;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct __fsid_t {
+pub struct __fsid_t
+{
     pub __val: [::std::os::raw::c_int; 2usize],
 }
 #[test]
-fn bindgen_test_layout___fsid_t() {
+fn bindgen_test_layout___fsid_t()
+{
     assert_eq!(
         ::std::mem::size_of::<__fsid_t>(),
         8usize,
@@ -519,7 +523,8 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenModule {
+pub struct BinaryenModule
+{
     _unused: [u8; 0],
 }
 pub type BinaryenModuleRef = *mut BinaryenModule;
@@ -531,13 +536,15 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BinaryenLiteral {
+pub struct BinaryenLiteral
+{
     pub type_: usize,
     pub __bindgen_anon_1: BinaryenLiteral__bindgen_ty_1,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union BinaryenLiteral__bindgen_ty_1 {
+pub union BinaryenLiteral__bindgen_ty_1
+{
     pub i32: i32,
     pub i64: i64,
     pub f32: f32,
@@ -547,7 +554,8 @@ pub union BinaryenLiteral__bindgen_ty_1 {
     _bindgen_union_align: [u64; 2usize],
 }
 #[test]
-fn bindgen_test_layout_BinaryenLiteral__bindgen_ty_1() {
+fn bindgen_test_layout_BinaryenLiteral__bindgen_ty_1()
+{
     assert_eq!(
         ::std::mem::size_of::<BinaryenLiteral__bindgen_ty_1>(),
         16usize,
@@ -632,7 +640,8 @@ fn bindgen_test_layout_BinaryenLiteral__bindgen_ty_1() {
     );
 }
 #[test]
-fn bindgen_test_layout_BinaryenLiteral() {
+fn bindgen_test_layout_BinaryenLiteral()
+{
     assert_eq!(
         ::std::mem::size_of::<BinaryenLiteral>(),
         24usize,
@@ -1698,7 +1707,8 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenExpression {
+pub struct BinaryenExpression
+{
     _unused: [u8; 0],
 }
 pub type BinaryenExpressionRef = *mut BinaryenExpression;
@@ -3098,7 +3108,8 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenFunction {
+pub struct BinaryenFunction
+{
     _unused: [u8; 0],
 }
 pub type BinaryenFunctionRef = *mut BinaryenFunction;
@@ -3181,7 +3192,8 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenExport {
+pub struct BinaryenExport
+{
     _unused: [u8; 0],
 }
 pub type BinaryenExportRef = *mut BinaryenExport;
@@ -3235,7 +3247,8 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenGlobal {
+pub struct BinaryenGlobal
+{
     _unused: [u8; 0],
 }
 pub type BinaryenGlobalRef = *mut BinaryenGlobal;
@@ -3259,7 +3272,8 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenEvent {
+pub struct BinaryenEvent
+{
     _unused: [u8; 0],
 }
 pub type BinaryenEventRef = *mut BinaryenEvent;
@@ -3467,12 +3481,14 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenBufferSizes {
+pub struct BinaryenBufferSizes
+{
     pub outputBytes: size_t,
     pub sourceMapBytes: size_t,
 }
 #[test]
-fn bindgen_test_layout_BinaryenBufferSizes() {
+fn bindgen_test_layout_BinaryenBufferSizes()
+{
     assert_eq!(
         ::std::mem::size_of::<BinaryenBufferSizes>(),
         16usize,
@@ -3518,13 +3534,15 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct BinaryenModuleAllocateAndWriteResult {
+pub struct BinaryenModuleAllocateAndWriteResult
+{
     pub binary: *mut ::std::os::raw::c_void,
     pub binaryBytes: size_t,
     pub sourceMap: *mut ::std::os::raw::c_char,
 }
 #[test]
-fn bindgen_test_layout_BinaryenModuleAllocateAndWriteResult() {
+fn bindgen_test_layout_BinaryenModuleAllocateAndWriteResult()
+{
     assert_eq!(
         ::std::mem::size_of::<BinaryenModuleAllocateAndWriteResult>(),
         24usize,
@@ -3801,13 +3819,15 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct Relooper {
+pub struct Relooper
+{
     _unused: [u8; 0],
 }
 pub type RelooperRef = *mut Relooper;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct RelooperBlock {
+pub struct RelooperBlock
+{
     _unused: [u8; 0],
 }
 pub type RelooperBlockRef = *mut RelooperBlock;
@@ -3851,7 +3871,8 @@ extern "C" {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CExpressionRunner {
+pub struct CExpressionRunner
+{
     _unused: [u8; 0],
 }
 pub type ExpressionRunnerRef = *mut CExpressionRunner;

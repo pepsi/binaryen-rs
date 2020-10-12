@@ -20,67 +20,103 @@ mod bindings;
 // }
 // #[derive(Debug)]
 
-pub struct Literal {
+pub struct Literal
+{
     inner: BinaryenLiteral,
 }
-impl Literal {
-    pub fn new(l: BinaryenLiteral) -> Self {
+impl Literal
+{
+    pub fn new(l: BinaryenLiteral) -> Self
+    {
         Self { inner: l }
+    }
+
+    pub fn int_32(x: i32) -> Literal
+    {
+        unsafe { Self::new(BinaryenLiteralInt32(x)) }
+    }
+    pub fn int_64(x: i64) -> Literal
+    {
+        unsafe { Self::new(BinaryenLiteralInt64(x)) }
+    }
+    pub fn float_32(x: f32) -> Literal
+    {
+        unsafe { Self::new(BinaryenLiteralFloat32(x)) }
+    }
+    pub fn float_64(x: f64) -> Literal
+    {
+        unsafe { Self::new(BinaryenLiteralFloat64(x)) }
     }
 }
 #[derive(Debug)]
-pub struct Op {
+pub struct Op
+{
     inner: BinaryenOp,
 }
 macro_rules! binop {
     ($name: ident, $full: ident) => {
-        pub fn $name() -> Op {
+        pub fn $name() -> Op
+        {
             unsafe { Op::new($full()) }
         }
     };
 }
-impl Op {
-    pub fn new(op: BinaryenOp) -> Self {
+impl Op
+{
+    pub fn new(op: BinaryenOp) -> Self
+    {
         return Self { inner: op };
     }
     // Potentially use macros for this?
 
-    pub fn add_int_32() -> Self {
+    pub fn add_int_32() -> Self
+    {
         return unsafe { Self::new(BinaryenAddInt32()) };
     }
-    pub fn add_int_64() -> Self {
+    pub fn add_int_64() -> Self
+    {
         return unsafe { Self::new(BinaryenAddInt64()) };
     }
-    pub fn add_float_32() -> Self {
+    pub fn add_float_32() -> Self
+    {
         return unsafe { Self::new(BinaryenAddFloat32()) };
     }
-    pub fn add_float_64() -> Self {
+    pub fn add_float_64() -> Self
+    {
         return unsafe { Self::new(BinaryenAddFloat64()) };
     }
 
-    pub fn sub_int_32() -> Self {
+    pub fn sub_int_32() -> Self
+    {
         return unsafe { Self::new(BinaryenSubInt32()) };
     }
-    pub fn sub_int_64() -> Self {
+    pub fn sub_int_64() -> Self
+    {
         return unsafe { Self::new(BinaryenSubInt64()) };
     }
-    pub fn sub_float_32() -> Self {
+    pub fn sub_float_32() -> Self
+    {
         return unsafe { Self::new(BinaryenSubFloat32()) };
     }
-    pub fn sub_float_64() -> Self {
+    pub fn sub_float_64() -> Self
+    {
         return unsafe { Self::new(BinaryenSubFloat64()) };
     }
 
-    pub fn mul_int_32() -> Self {
+    pub fn mul_int_32() -> Self
+    {
         return unsafe { Self::new(BinaryenMulInt32()) };
     }
-    pub fn mul_int_64() -> Self {
+    pub fn mul_int_64() -> Self
+    {
         return unsafe { Self::new(BinaryenMulInt64()) };
     }
-    pub fn mul_float_32() -> Self {
+    pub fn mul_float_32() -> Self
+    {
         return unsafe { Self::new(BinaryenMulFloat32()) };
     }
-    pub fn mul_float_64() -> Self {
+    pub fn mul_float_64() -> Self
+    {
         return unsafe { Self::new(BinaryenMulFloat64()) };
     }
 
@@ -534,36 +570,58 @@ impl Op {
     binop!(swizzle_vec8x16, BinaryenSwizzleVec8x16);
 }
 #[derive(Debug)]
-pub struct ExpressionRef {
+pub struct ExpressionRef
+{
     inner: BinaryenExpressionRef,
 }
-impl ExpressionRef {
-    pub fn new(expr: BinaryenExpressionRef) -> Self {
+impl ExpressionRef
+{
+    pub fn new(expr: BinaryenExpressionRef) -> Self
+    {
         return ExpressionRef { inner: expr };
     }
 }
 #[derive(Debug)]
-pub struct Module {
+pub struct Export
+{
+    inner: *mut BinaryenExport,
+}
+impl Export
+{
+    fn new(expr: *mut BinaryenExport) -> Self
+    {
+        return Self { inner: expr };
+    }
+}
+#[derive(Debug)]
+pub struct Module
+{
     inner: BinaryenModuleRef,
 }
-impl Module {
-    pub fn new() -> Self {
+impl Module
+{
+    pub fn new() -> Self
+    {
         return unsafe {
             Self {
                 inner: BinaryenModuleCreate(),
             }
         };
     }
-    pub fn print(&mut self) {
+    pub fn print(&mut self)
+    {
         unsafe { BinaryenModulePrint(self.inner) }
     }
-    pub fn print_wat(&mut self) {
+    pub fn print_wat(&mut self)
+    {
         unsafe { BinaryenModulePrint(self.inner) }
     }
-    pub fn print_asmjs(&mut self) {
+    pub fn print_asmjs(&mut self)
+    {
         unsafe { BinaryenModulePrintAsmjs(self.inner) }
     }
-    pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef {
+    pub fn get_local(&mut self, index: i32, dype: Type) -> ExpressionRef
+    {
         unsafe {
             ExpressionRef::new(BinaryenLocalGet(
                 self.inner,
@@ -572,7 +630,8 @@ impl Module {
             ))
         }
     }
-    pub fn set_local(&mut self, index: i32, value: ExpressionRef) -> ExpressionRef {
+    pub fn set_local(&mut self, index: i32, value: ExpressionRef) -> ExpressionRef
+    {
         unsafe {
             ExpressionRef::new(BinaryenLocalSet(
                 self.inner,
@@ -584,7 +643,8 @@ impl Module {
     /*
     Create new binary operation
     */
-    pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef {
+    pub fn binary(&mut self, op: Op, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef
+    {
         return unsafe {
             ExpressionRef::new(BinaryenBinary(
                 self.inner,
@@ -602,7 +662,8 @@ impl Module {
         results: Type,
         var_types: Vec<Type>,
         body: ExpressionRef,
-    ) {
+    )
+    {
         let mut inners = var_types
             .iter()
             .map(|t| t.inner)
@@ -621,33 +682,36 @@ impl Module {
         }
     }
     /// Bool whether the validation was successful
-    pub fn validate(&mut self) -> bool {
+    pub fn validate(&mut self) -> bool
+    {
         return unsafe { BinaryenModuleValidate(self.inner) == 1 };
     }
     /// Incase you want to have the raw validation number.
-    pub fn validate_i(&mut self) -> i32 {
+    pub fn validate_i(&mut self) -> i32
+    {
         return unsafe { BinaryenModuleValidate(self.inner) };
     }
     /// Optimise
-    pub fn optimize(&mut self) {
+    pub fn optimize(&mut self)
+    {
         unsafe { BinaryenModuleOptimize(self.inner) }
     }
     #[doc = "Get current optimization level, set new optimization `level`, optimize, set back to original optimization level."]
-    pub fn optimize_with_level(&mut self, level: i32) {
+    pub fn optimize_with_level(&mut self, level: i32)
+    {
         let current_level = unsafe { BinaryenGetOptimizeLevel() };
         unsafe { BinaryenSetOptimizeLevel(level) }
         unsafe { BinaryenModuleOptimize(self.inner) }
         unsafe { BinaryenSetOptimizeLevel(current_level) }
     }
-    pub fn make_const(&mut self, value: Literal) -> ExpressionRef {
+    pub fn make_const(&mut self, value: Literal) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe { BinaryenConst(self.inner, value.inner) })
     }
 
-    pub fn new_nameless_block(
-        &mut self,
-        children: Vec<ExpressionRef>,
-        type_: Type,
-    ) -> ExpressionRef {
+    pub fn new_nameless_block(&mut self, children: Vec<ExpressionRef>, type_: Type)
+        -> ExpressionRef
+    {
         let mut inners = children
             .iter()
             .map(|t| t.inner)
@@ -668,7 +732,8 @@ impl Module {
         name: &str,
         children: Vec<ExpressionRef>,
         type_: Type,
-    ) -> ExpressionRef {
+    ) -> ExpressionRef
+    {
         let mut inners = children
             .iter()
             .map(|t| t.inner)
@@ -683,9 +748,50 @@ impl Module {
             )
         })
     }
+    pub fn add_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
+        let c_internal_name = CString::new(internal_name.to_string()).unwrap();
+        let c_external_name = CString::new(external_name.to_string()).unwrap();
+        return Export::new(unsafe {
+            BinaryenAddExport(
+                self.inner,
+                c_internal_name.as_ptr(),
+                c_external_name.as_ptr(),
+            )
+        });
+    }
+    pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
+        let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
+        let c_external_name = CString::new(external_name).unwrap().as_ptr();
+
+        return Export::new(unsafe {
+            BinaryenAddFunctionExport(self.inner, c_internal_name, c_external_name)
+        });
+    }
+    pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
+        let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
+        let c_external_name = CString::new(external_name).unwrap().as_ptr();
+
+        return Export::new(unsafe {
+            BinaryenAddTableExport(self.inner, c_internal_name, c_external_name)
+        });
+    }
+    pub fn add_memory_export(&mut self, internal_name: &str, external_name: &str) -> Export
+    {
+        let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
+        let c_external_name = CString::new(external_name).unwrap().as_ptr();
+
+        return Export::new(unsafe {
+            BinaryenAddMemoryExport(self.inner, c_internal_name, c_external_name)
+        });
+    }
 }
-impl Drop for Module {
-    fn drop(&mut self) {
+impl Drop for Module
+{
+    fn drop(&mut self)
+    {
         unsafe { BinaryenModuleDispose(self.inner) }
     }
 }
@@ -698,36 +804,44 @@ impl Drop for Module {
 //     }
 // }
 #[derive(Debug)]
-pub struct Type {
+pub struct Type
+{
     inner: BinaryenType,
 }
-impl Type {
-    pub fn int_32() -> Self {
+impl Type
+{
+    pub fn int_32() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenTypeInt32() } },
         };
     }
-    pub fn int_64() -> Self {
+    pub fn int_64() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenInt64() } },
         };
     }
-    pub fn float_32() -> Self {
+    pub fn float_32() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenFloat32() } },
         };
     }
-    pub fn float_64() -> Self {
+    pub fn float_64() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenFloat64() } },
         };
     }
-    pub fn none() -> Self {
+    pub fn none() -> Self
+    {
         return Self {
             inner: { unsafe { BinaryenNone() } },
         };
     }
-    pub fn create(value_types: Vec<Type>) -> Self {
+    pub fn create(value_types: Vec<Type>) -> Self
+    {
         return unsafe {
             let mut inners = value_types
                 .iter()
@@ -741,17 +855,4 @@ impl Type {
             }
         };
     }
-}
-
-pub fn literal_int_32(x: i32) -> Literal {
-    unsafe { Literal::new(BinaryenLiteralInt32(x)) }
-}
-pub fn literal_int_64(x: i64) -> Literal {
-    unsafe { Literal::new(BinaryenLiteralInt64(x)) }
-}
-pub fn literal_float_32(x: f32) -> Literal {
-    unsafe { Literal::new(BinaryenLiteralFloat32(x)) }
-}
-pub fn literal_float_64(x: f64) -> Literal {
-    unsafe { Literal::new(BinaryenLiteralFloat64(x)) }
 }
