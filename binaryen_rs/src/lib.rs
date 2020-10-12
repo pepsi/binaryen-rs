@@ -5,7 +5,9 @@
 use std::rc::Rc;
 use std::{convert::TryInto, ffi::CString};
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+use bindings::*;
+mod bindings;
+// include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 // #[derive(Debug)]
 // pub struct Local {
 //     module: Rc<Module>,
@@ -175,17 +177,24 @@ impl Module {
             );
         }
     }
-    // Bool whether the validation was successful
+    /// Bool whether the validation was successful
     pub fn validate(&mut self) -> bool {
         return unsafe { BinaryenModuleValidate(self.inner) == 1 };
     }
-    // Incase you want to have the raw validation number.
+    /// Incase you want to have the raw validation number.
     pub fn validate_i(&mut self) -> i32 {
         return unsafe { BinaryenModuleValidate(self.inner) };
     }
-    // Optimis
+    /// Optimise
     pub fn optimize(&mut self) {
         unsafe { BinaryenModuleOptimize(self.inner) }
+    }
+    #[doc = "Get current optimization level, set new optimization `level`, optimize, set back to original optimization level."]
+    pub fn optimize_with_level(&mut self, level: i32) {
+        let current_level = unsafe { BinaryenGetOptimizeLevel() };
+        unsafe { BinaryenSetOptimizeLevel(level) }
+        unsafe { BinaryenModuleOptimize(self.inner) }
+        unsafe { BinaryenSetOptimizeLevel(current_level) }
     }
     pub fn make_const(&mut self, value: Literal) -> ExpressionRef {
         ExpressionRef::new(unsafe { BinaryenConst(self.inner, value.inner) })
@@ -217,7 +226,6 @@ impl Module {
         children: Vec<ExpressionRef>,
         type_: Type,
     ) -> ExpressionRef {
-
         let mut inners = children
             .iter()
             .map(|t| t.inner)

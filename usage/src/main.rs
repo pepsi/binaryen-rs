@@ -54,7 +54,7 @@ fn main() {
         ]);
         let result = binaryen_rs::Type::int_32();
         let mut bodies = vec![];
-        for i in 0..5{
+        for _i in 0..5{
             let lhs = module.get_local(0, binaryen_rs::Type::int_32());
             let rhs = module.get_local(1, binaryen_rs::Type::int_32());
     
@@ -69,7 +69,7 @@ fn main() {
         module.add_function("test", params, binaryen_rs::Type::none(), vec![binaryen_rs::Type::int_32()], final_block);
     }
     assert!(module.validate(), "Module failed to validate!");
-    // module.optimize();
+    // module.optimize_with_level(0);s
     module.print();
     println!("Hello, world!");
 }
