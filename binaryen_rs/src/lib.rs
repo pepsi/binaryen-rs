@@ -18,17 +18,24 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 // }
 // #[derive(Debug)]
 
-pub struct Literal{
-    inner: BinaryenLiteral
+pub struct Literal {
+    inner: BinaryenLiteral,
 }
-impl Literal{
-    pub fn new(l: BinaryenLiteral) -> Self{
-        Self{inner: l}
+impl Literal {
+    pub fn new(l: BinaryenLiteral) -> Self {
+        Self { inner: l }
     }
 }
 #[derive(Debug)]
 pub struct Op {
     inner: BinaryenOp,
+}
+macro_rules! binop {
+    ($name: ident, $full: ident) => {
+        pub fn $name() -> Op {
+            unsafe { Op::new($full()) }
+        }
+    };
 }
 impl Op {
     pub fn new(op: BinaryenOp) -> Self {
@@ -74,6 +81,12 @@ impl Op {
     pub fn mul_float_64() -> Self {
         return unsafe { Self::new(BinaryenMulFloat64()) };
     }
+
+    binop!(sqrt_float_32, BinaryenSqrtFloat32);
+    binop!(clz_int_32, BinaryenClzInt32);
+    binop!(ctz_int_32, BinaryenCtzInt32);
+    binop!(pop_cnt_int_i32, BinaryenPopcntInt32);
+    binop!(neg_float_int_32, BinaryenNegFloat32);
 }
 #[derive(Debug)]
 pub struct ExpressionRef {
@@ -114,6 +127,15 @@ impl Module {
             ))
         }
     }
+    pub fn set_local(&mut self, index: i32, value: ExpressionRef) -> ExpressionRef {
+        unsafe {
+            ExpressionRef::new(BinaryenLocalSet(
+                self.inner,
+                index.try_into().unwrap(),
+                value.inner,
+            ))
+        }
+    }
     /*
     Create new binary operation
     */
@@ -140,6 +162,7 @@ impl Module {
             .iter()
             .map(|t| t.inner)
             .collect::<Vec<BinaryenType>>();
+
         unsafe {
             BinaryenAddFunction(
                 self.inner,
@@ -165,16 +188,54 @@ impl Module {
         unsafe { BinaryenModuleOptimize(self.inner) }
     }
     pub fn make_const(&mut self, value: Literal) -> ExpressionRef {
-        ExpressionRef::new( unsafe {
-            BinaryenConst(self.inner, value.inner)
+        ExpressionRef::new(unsafe { BinaryenConst(self.inner, value.inner) })
+    }
+
+    pub fn new_nameless_block(
+        &mut self,
+        children: Vec<ExpressionRef>,
+        type_: Type,
+    ) -> ExpressionRef {
+        let mut inners = children
+            .iter()
+            .map(|t| t.inner)
+            .collect::<Vec<BinaryenExpressionRef>>();
+        ExpressionRef::new(unsafe {
+            BinaryenBlock(
+                self.inner,
+                std::ptr::null(),
+                inners.as_mut_ptr(),
+                inners.len().try_into().unwrap(),
+                type_.inner,
+            )
+        })
+    }
+
+    pub fn new_block(
+        &mut self,
+        name: &str,
+        children: Vec<ExpressionRef>,
+        type_: Type,
+    ) -> ExpressionRef {
+
+        let mut inners = children
+            .iter()
+            .map(|t| t.inner)
+            .collect::<Vec<BinaryenExpressionRef>>();
+        ExpressionRef::new(unsafe {
+            BinaryenBlock(
+                self.inner,
+                CString::new(name).unwrap().as_ptr(),
+                inners.as_mut_ptr(),
+                inners.len().try_into().unwrap(),
+                type_.inner,
+            )
         })
     }
 }
-impl Drop for Module{
+impl Drop for Module {
     fn drop(&mut self) {
-        unsafe {
-            BinaryenModuleDispose(self.inner)
-        }
+        unsafe { BinaryenModuleDispose(self.inner) }
     }
 }
 // pub struct ModuleRef{
@@ -210,6 +271,11 @@ impl Type {
             inner: { unsafe { BinaryenFloat64() } },
         };
     }
+    pub fn none() -> Self {
+        return Self {
+            inner: { unsafe { BinaryenNone() } },
+        };
+    }
     pub fn create(value_types: Vec<Type>) -> Self {
         return unsafe {
             let mut inners = value_types
@@ -224,10 +290,40 @@ impl Type {
             }
         };
     }
-    
 }
-pub fn literal_int_32(x: i32) -> Literal{
-    unsafe {
-        Literal::new(BinaryenLiteralInt32(x))
-    }
+/*
+extern "C" {
+    pub fn BinaryenLiteralInt32(x: i32) -> BinaryenLiteral;
+}
+extern "C" {
+    pub fn BinaryenLiteralInt64(x: i64) -> BinaryenLiteral;
+}
+extern "C" {
+    pub fn BinaryenLiteralFloat32(x: f32) -> BinaryenLiteral;
+}
+extern "C" {
+    pub fn BinaryenLiteralFloat64(x: f64) -> BinaryenLiteral;
+}
+extern "C" {
+    pub fn BinaryenLiteralVec128(x: *const u8) -> BinaryenLiteral;
+}
+extern "C" {
+    pub fn BinaryenLiteralFloat32Bits(x: i32) -> BinaryenLiteral;
+}
+extern "C" {
+    pub fn BinaryenLiteralFloat64Bits(x: i64) -> BinaryenLiteral;
+}
+*/
+
+pub fn literal_int_32(x: i32) -> Literal {
+    unsafe { Literal::new(BinaryenLiteralInt32(x)) }
+}
+pub fn literal_int_64(x: i64) -> Literal {
+    unsafe { Literal::new(BinaryenLiteralInt64(x)) }
+}
+pub fn literal_float_32(x: f32) -> Literal {
+    unsafe { Literal::new(BinaryenLiteralFloat32(x)) }
+}
+pub fn literal_float_64(x: f64) -> Literal {
+    unsafe { Literal::new(BinaryenLiteralFloat64(x)) }
 }
