@@ -593,11 +593,15 @@ impl Export
         return Self { inner: expr };
     }
 }
+unsafe impl Send for Export{}
+unsafe impl Sync for Export{}
 #[derive(Debug)]
 pub struct Module
 {
     inner: BinaryenModuleRef,
 }
+unsafe impl Send for Module{}
+unsafe impl Sync for Module{}
 impl Module
 {
     pub fn new() -> Self
@@ -760,6 +764,7 @@ impl Module
             )
         });
     }
+    #[deprecated = "Use add_export while I try to fix this"]
     pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export
     {
         let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
@@ -787,39 +792,35 @@ impl Module
             BinaryenAddMemoryExport(self.inner, c_internal_name, c_external_name)
         });
     }
-    pub fn write(&mut self, filename: &str)
-    {
-        println!("Writing... ");
-        let x = unsafe {
-            let mut test = vec![0; 4096];
-            let m = test.as_mut_ptr();
-            BinaryenModuleWrite(self.inner, m, test.len().try_into().unwrap());
-            test
-        };
-        let bytes = x.iter().map(|c| *c as u8).collect::<Vec<u8>>().to_vec();
-        let s = bytes.iter().map(|v| *v as char).collect::<String>();
-        let s = s.trim_end_matches(|c: char| match c {
-            '\0' => true,
-            _ => false,
-        });
-        std::fs::write(filename, s).unwrap();
-    }
+    //TODO: Fix
+    
+    // pub fn write(&mut self, filename: &str)
+    // {
+    //     let c = unsafe {
+    //         let was_color_originally_enabled = BinaryenAreColorsEnabled();
+    //         BinaryenSetColorsEnabled(0);
+    //         let result = 
+    //             BinaryenModuleAllocateAndWrite(self.inner, std::ptr::null_mut());
+    //         BinaryenSetColorsEnabled(was_color_originally_enabled);
+    //         // result
+    //         // std::ffi::CStr::from_ptr(result.binary as  *const i8)
+    //         // result.binaryBytes
+    //         result.binary.as_ref().unwrap()
+    //     };
+    //     println!("{:?}", c);
+    //     // std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
+    // }
     pub fn write_text(&mut self, filename: &str)
     {
-        println!("Writing... ");
-        let x = unsafe {
-            let mut test = vec![0; 4096];
-            let m = test.as_mut_ptr();
-            BinaryenModuleWriteText(self.inner, m, test.len().try_into().unwrap());
-            test
+        let c = unsafe {
+            let was_color_originally_enabled = BinaryenAreColorsEnabled();
+            BinaryenSetColorsEnabled(0);
+            let c: *mut ::std::os::raw::c_char = BinaryenModuleAllocateAndWriteText(self.inner);
+            BinaryenSetColorsEnabled(was_color_originally_enabled);
+
+            std::ffi::CStr::from_ptr(c)
         };
-        let bytes = x.iter().map(|c| *c as u8).collect::<Vec<u8>>().to_vec();
-        let s = bytes.iter().map(|v| *v as char).collect::<String>();
-        let s = s.trim_end_matches(|c: char| match c {
-            '\0' => true,
-            _ => false,
-        });
-        std::fs::write(filename, s).unwrap();
+        std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     }
 }
 impl Drop for Module
