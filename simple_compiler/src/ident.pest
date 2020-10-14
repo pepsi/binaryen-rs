@@ -1,0 +1,16 @@
+// alpha = { 'a'..'z' | 'A'..'Z' }
+// digit = { '0'..'9' }
+
+// ident = { (alpha | digit)+ }
+
+// ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
+//           // ^
+//           // ident_list rule is silent which means it produces no tokens
+
+digit = { '0' .. '9'}
+
+number = { digit* }
+
+math_op = { ( "+" ) | ( "-" ) }
+
+math = { number ~ math_op ~ number}

@@ -10,7 +10,7 @@ fn general_test() {
         let result = binaryen_rs::Type::int_32();
         let lhs = module.get_local(0, binaryen_rs::Type::int_32());
         let rhs = module.get_local(1, binaryen_rs::Type::int_32());
-        let add = module.binary(binaryen_rs::Op::add_int_32(), lhs, rhs);
+        let add = module.binary(binaryen_rs::Op::add_int32(), lhs, rhs);
         module.add_function("add_i32", params, result, vec![], add);
     }
 
@@ -22,7 +22,7 @@ fn general_test() {
         let result = binaryen_rs::Type::float_64();
         let lhs = module.get_local(0, binaryen_rs::Type::float_64());
         let rhs = module.get_local(1, binaryen_rs::Type::float_64());
-        let add = module.binary(binaryen_rs::Op::add_float_64(), lhs, rhs);
+        let add = module.binary(binaryen_rs::Op::add_float64(), lhs, rhs);
         module.add_function("add_f64", params, result, vec![], add);
     }
     {
@@ -33,7 +33,7 @@ fn general_test() {
         let result = binaryen_rs::Type::float_32();
         let lhs = module.get_local(0, binaryen_rs::Type::float_32());
         let rhs = module.get_local(1, binaryen_rs::Type::float_32());
-        let add = module.binary(binaryen_rs::Op::mul_float_32(), lhs, rhs);
+        let add = module.binary(binaryen_rs::Op::mul_float32(), lhs, rhs);
         module.add_function("mul_f32", params, result, vec![], add);
     }
     {
@@ -41,7 +41,7 @@ fn general_test() {
         let result = binaryen_rs::Type::int_32();
         let lhs = module.get_local(0, binaryen_rs::Type::int_32());
         let rhs = module.make_const(binaryen_rs::Literal::int_32(5));
-        let add = module.binary(binaryen_rs::Op::add_int_32(), lhs, rhs);
+        let add = module.binary(binaryen_rs::Op::add_int32(), lhs, rhs);
         module.add_function("add_5", params, result, vec![], add);
     }
 

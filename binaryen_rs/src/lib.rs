@@ -69,56 +69,6 @@ impl Op
     }
     // Potentially use macros for this?
 
-    pub fn add_int_32() -> Self
-    {
-        return unsafe { Self::new(BinaryenAddInt32()) };
-    }
-    pub fn add_int_64() -> Self
-    {
-        return unsafe { Self::new(BinaryenAddInt64()) };
-    }
-    pub fn add_float_32() -> Self
-    {
-        return unsafe { Self::new(BinaryenAddFloat32()) };
-    }
-    pub fn add_float_64() -> Self
-    {
-        return unsafe { Self::new(BinaryenAddFloat64()) };
-    }
-
-    pub fn sub_int_32() -> Self
-    {
-        return unsafe { Self::new(BinaryenSubInt32()) };
-    }
-    pub fn sub_int_64() -> Self
-    {
-        return unsafe { Self::new(BinaryenSubInt64()) };
-    }
-    pub fn sub_float_32() -> Self
-    {
-        return unsafe { Self::new(BinaryenSubFloat32()) };
-    }
-    pub fn sub_float_64() -> Self
-    {
-        return unsafe { Self::new(BinaryenSubFloat64()) };
-    }
-
-    pub fn mul_int_32() -> Self
-    {
-        return unsafe { Self::new(BinaryenMulInt32()) };
-    }
-    pub fn mul_int_64() -> Self
-    {
-        return unsafe { Self::new(BinaryenMulInt64()) };
-    }
-    pub fn mul_float_32() -> Self
-    {
-        return unsafe { Self::new(BinaryenMulFloat32()) };
-    }
-    pub fn mul_float_64() -> Self
-    {
-        return unsafe { Self::new(BinaryenMulFloat64()) };
-    }
 
     // binop!(sqrt_float_32, BinaryenSqrtFloat32);
     // binop!(clz_int_32, BinaryenClzInt32);
