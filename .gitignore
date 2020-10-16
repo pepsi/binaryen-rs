@@ -3,3 +3,4 @@ usage/target
 binaryen_rs/target
 simple_compiler/target
 advanced_compiler/target
+kitchen-sink/target

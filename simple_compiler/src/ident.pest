@@ -7,10 +7,12 @@
 //           // ^
 //           // ident_list rule is silent which means it produces no tokens
 
+WHITESPACE = _{ " " | "\t" }
 digit = { '0' .. '9'}
 
 number = { digit* }
 
-math_op = { ( "+" ) | ( "-" ) }
+math_op = { ( "+" ) | ( "-" ) | ( "*") }
 
-math = { number ~ math_op ~ number}
+
+math = { number ~ math_op ~ number ~ ";"}

@@ -1,5 +1,5 @@
 [package]
-name = "advanced_compiler"
+name = "kitchen-sink"
 version = "0.1.0"
 authors = ["Rusty Shackleford <a@neb.best>"]
 edition = "2018"
@@ -8,6 +8,4 @@ edition = "2018"
 
 [dependencies]
 binaryen_rs = {path = "../binaryen_rs"}
-serde_json = "1.0.59"
-serde = {version = "1.0.116", features = ["serde_derive"]}
-serde-lexpr = "0.1.0"
+lazy_static = "1.4.0"

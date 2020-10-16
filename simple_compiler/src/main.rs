@@ -8,16 +8,22 @@ use pest::Parser;
 #[grammar = "ident.pest"]
 struct IdentParser;
 
+fn parse_pair(p: i32){
+
+}
+
 fn main() {
     let mut module = Module::new();
     let input = std::fs::read("in.sc").unwrap();
-    let pairs = IdentParser::parse(
+    let pairs: ::pest::iterators::Pairs<Rule> = IdentParser::parse(
         Rule::math,
         std::str::from_utf8(&input).unwrap_or_else(|e| panic!("{}", e)),
-    );
-
+    ).unwrap();
+    
+    let a = 5;
+    a = 6;
     // Because ident_list is silent, the iterator will contain idents
-    for pair in pairs.unwrap() {
+    for pair in pairs {
         // A pair is a combination of the rule which matched and a span of input
         println!("Rule:    {:?}", pair.as_rule());
         println!("Span:    {:?}", pair.as_span());
@@ -29,9 +35,11 @@ fn main() {
         // for inner_pair in pair.into_inner() {
         match pair.as_rule() {
             Rule::math => {
+                // println!("math op -> pairs = {:?}", pairs.next());
                 let mut pairs = pair.into_inner();
-                println!("math op -> pairs = {:?}", pairs.next());
-                let lhs: &str = pair.as_str();
+
+                let lhs: &str = pairs.next().unwrap().as_str();
+                
                 dbg!(lhs);
                 let op: &str = pairs.next().unwrap().as_str();
                 dbg!(op);

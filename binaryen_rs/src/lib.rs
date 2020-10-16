@@ -47,6 +47,15 @@ impl Literal
     {
         unsafe { Self::new(BinaryenLiteralFloat64(x)) }
     }
+
+    pub fn float_32_bits(x: i32) -> Literal
+    {
+        unsafe { Self::new(BinaryenLiteralFloat32Bits(x)) }
+    }
+    pub fn float_64_bits(x: i64) -> Literal
+    {
+        unsafe { Self::new(BinaryenLiteralFloat64Bits(x)) }
+    }
 }
 #[derive(Debug)]
 pub struct Op
@@ -68,7 +77,6 @@ impl Op
         return Self { inner: op };
     }
     // Potentially use macros for this?
-
 
     // binop!(sqrt_float_32, BinaryenSqrtFloat32);
     // binop!(clz_int_32, BinaryenClzInt32);
@@ -519,7 +527,7 @@ impl Op
     );
     binop!(swizzle_vec8x16, BinaryenSwizzleVec8x16);
 }
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ExpressionRef
 {
     inner: BinaryenExpressionRef,
@@ -543,15 +551,15 @@ impl Export
         return Self { inner: expr };
     }
 }
-unsafe impl Send for Export{}
-unsafe impl Sync for Export{}
+unsafe impl Send for Export {}
+unsafe impl Sync for Export {}
 #[derive(Debug)]
 pub struct Module
 {
     inner: BinaryenModuleRef,
 }
-unsafe impl Send for Module{}
-unsafe impl Sync for Module{}
+unsafe impl Send for Module {}
+unsafe impl Sync for Module {}
 impl Module
 {
     pub fn new() -> Self
@@ -743,13 +751,13 @@ impl Module
         });
     }
     //TODO: Fix
-    
+
     // pub fn write(&mut self, filename: &str)
     // {
     //     let c = unsafe {
     //         let was_color_originally_enabled = BinaryenAreColorsEnabled();
     //         BinaryenSetColorsEnabled(0);
-    //         let result = 
+    //         let result =
     //             BinaryenModuleAllocateAndWrite(self.inner, std::ptr::null_mut());
     //         BinaryenSetColorsEnabled(was_color_originally_enabled);
     //         // result
@@ -772,6 +780,72 @@ impl Module
         };
         std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     }
+    pub fn compile(&mut self) -> String
+    {
+        let c = unsafe {
+            let was_color_originally_enabled = BinaryenAreColorsEnabled();
+            BinaryenSetColorsEnabled(0);
+            let c: *mut ::std::os::raw::c_char = BinaryenModuleAllocateAndWriteText(self.inner);
+            BinaryenSetColorsEnabled(was_color_originally_enabled);
+
+            std::ffi::CStr::from_ptr(c)
+        };
+        c.to_string_lossy().to_string()
+        // std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
+    }
+    pub fn unary(&mut self, op: Op, value: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenUnary(self.inner, op.inner, value.inner) })
+    }
+    /// Cant use `module.drop()` because thats taken up by `impl Drop`.
+    pub fn drop_var(&mut self, var: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenDrop(self.inner, var.inner) })
+    }
+    pub fn memory_init(
+        &mut self,
+        segment: i32,
+        dest: ExpressionRef,
+        offset: ExpressionRef,
+        size: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenMemoryInit(
+                self.inner,
+                segment.try_into().unwrap(),
+                dest.inner,
+                offset.inner,
+                size.inner,
+            )
+        })
+    }
+    pub fn memory_copy(
+        &mut self,
+        dest: ExpressionRef,
+        source: ExpressionRef,
+        size: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenMemoryCopy(self.inner, dest.inner, source.inner, size.inner)
+        })
+    }
+    pub fn memory_fill(
+        &mut self,
+        dest: ExpressionRef,
+        value: ExpressionRef,
+        size: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenMemoryFill(self.inner, dest.inner, value.inner, size.inner)
+        })
+    }
+    pub fn data_drop(&mut self, segment: i32) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenDataDrop(self.inner, segment.try_into().unwrap()) })
+    }
 }
 impl Drop for Module
 {
@@ -788,7 +862,7 @@ impl Drop for Module
 //         Self{inner: x}
 //     }
 // }
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Type
 {
     inner: BinaryenType,
@@ -804,27 +878,70 @@ impl Type
     pub fn int_64() -> Self
     {
         return Self {
-            inner: { unsafe { BinaryenInt64() } },
+            inner: { unsafe { BinaryenTypeInt64() } },
         };
     }
     pub fn float_32() -> Self
     {
         return Self {
-            inner: { unsafe { BinaryenFloat32() } },
+            inner: { unsafe { BinaryenTypeFloat32() } },
         };
     }
     pub fn float_64() -> Self
     {
         return Self {
-            inner: { unsafe { BinaryenFloat64() } },
+            inner: { unsafe { BinaryenTypeFloat64() } },
         };
     }
     pub fn none() -> Self
     {
         return Self {
-            inner: { unsafe { BinaryenNone() } },
+            inner: { unsafe { BinaryenTypeNone() } },
         };
     }
+    pub fn unreachable() -> Self
+    {
+        return Self {
+            inner: { unsafe { BinaryenTypeUnreachable() } },
+        };
+    }
+    pub fn funcref() -> Self
+    {
+        return Self {
+            inner: { unsafe { BinaryenTypeFuncref() } },
+        };
+    }
+    pub fn externref() -> Self
+    {
+        return Self {
+            inner: { unsafe { BinaryenTypeExternref() } },
+        };
+    }
+    pub fn exnref() -> Self
+    {
+        return Self {
+            inner: { unsafe { BinaryenTypeExnref() } },
+        };
+    }
+    pub fn auto() -> Self
+    {
+        return Self {
+            inner: { unsafe { BinaryenTypeAuto() } },
+        };
+    }
+    // pub fn i31_ref() -> Self
+    // {
+    //     return Self {
+    //         inner: { unsafe { BinaryenTypeI31ref() } },
+    //     };
+    // }
+    // pub fn eqref() -> Self
+    // {
+    //     return Self {
+    //         inner: { unsafe { BinaryenType() } },
+    //     };
+    // }
+
     pub fn create(value_types: Vec<Type>) -> Self
     {
         return unsafe {
@@ -840,4 +957,55 @@ impl Type
             }
         };
     }
+    pub fn arity(&mut self) -> u32
+    {
+        unsafe { BinaryenTypeArity(self.inner) }
+    }
+}
+#[derive(Debug)]
+pub struct Features
+{
+    inner: BinaryenFeatures,
+}
+
+/*
+        BinaryenFeatureMVP: 0
+        BinaryenFeatureAtomics: 1
+        BinaryenFeatureBulkMemory: 16
+        BinaryenFeatureMutableGlobals: 2
+        BinaryenFeatureNontrappingFPToInt: 4
+        BinaryenFeatureSignExt: 32
+        BinaryenFeatureSIMD128: 8
+        BinaryenFeatureExceptionHandling: 64
+        BinaryenFeatureTailCall: 128
+        BinaryenFeatureReferenceTypes: 256
+        BinaryenFeatureMultivalue: 512
+        BinaryenFeatureGC: 1024
+        BinaryenFeatureMemory64: 2048
+        BinaryenFeatureAll: 4095
+*/
+macro_rules! impl_feature {
+    ($name: ident, $check: ident) => {
+        pub fn $name() -> i32
+        {
+            return unsafe { $check() } as i32;
+        }
+    };
+}
+impl Features
+{
+    impl_feature!(mvp, BinaryenFeatureMVP);
+    impl_feature!(atomics, BinaryenFeatureAtomics);
+    impl_feature!(bulk_memory, BinaryenFeatureBulkMemory);
+    impl_feature!(mutable_globals, BinaryenFeatureMutableGlobals);
+    impl_feature!(non_trapping_fp_to_int, BinaryenFeatureNontrappingFPToInt);
+    impl_feature!(sign_ext, BinaryenFeatureSignExt);
+    impl_feature!(simd_128, BinaryenFeatureSIMD128);
+    impl_feature!(exception_handling, BinaryenFeatureExceptionHandling);
+    impl_feature!(tail_call, BinaryenFeatureTailCall);
+    impl_feature!(reference_types, BinaryenFeatureReferenceTypes);
+    impl_feature!(multi_value, BinaryenFeatureMultivalue);
+    impl_feature!(gc, BinaryenFeatureGC);
+    /* TODO: get this working impl_feature!(memory_64, BinaryenFeatureMemory64, 2048); */
+    impl_feature!(feature_all, BinaryenFeatureAll);
 }

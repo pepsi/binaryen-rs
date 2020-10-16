@@ -1,0 +1,39 @@
+{
+  "functions": [
+    {
+      "name": "example",
+      "params": [
+        {
+          "name": "lhs",
+          "type": "I32"
+        },
+        {
+          "name": "rhs",
+          "type": "I32"
+        }
+      ],
+      "instructions": [
+        {
+          "Add": [
+            {
+              "Local": "0"
+            },
+            {
+              "Local": "1"
+            }
+          ]
+        },
+        {
+          "Add": [
+            {
+              "Local": "0"
+            },
+            {
+              "Local": "1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
