@@ -2,6 +2,7 @@ extern crate bindgen;
 
 use std::env;
 use std::path::PathBuf;
+use inline_python::python;
 
 fn main()
 {
@@ -32,4 +33,21 @@ fn main()
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+        let bindings = std::fs::read(out_path.join("bindings.rs")).unwrap();
+    let bindings_str = std::str::from_utf8(&bindings).unwrap();
+    python!{
+        import re
+        lines = []
+        lines2 = []
+        b = 'bindings_str
+        with open("test.txt", "w") as f: f.write(" ")
+        lines.append(b.split("pub type BinaryenOp = i32;")[1].split("#")[0])
+        for line in "\n".join(lines).split("\n"):
+            if "extern \"C\"" not in line and "}" not in line:
+                with open("test.txt", "a") as f:
+                    source = line.strip().replace("pub fn", "").replace("-> _binaryen_op;", "")
+                    print(source)
+                    after = re.sub(r"(?<!^)(?=[A-Z])", "_", source).lower()
+                    f.write(after[2:-19] + "\n")
+    }
 }

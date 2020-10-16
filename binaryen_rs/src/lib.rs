@@ -527,7 +527,7 @@ impl Op
     );
     binop!(swizzle_vec8x16, BinaryenSwizzleVec8x16);
 }
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct ExpressionRef
 {
     inner: BinaryenExpressionRef,
@@ -537,6 +537,14 @@ impl ExpressionRef
     pub fn new(expr: BinaryenExpressionRef) -> Self
     {
         return ExpressionRef { inner: expr };
+    }
+    pub fn null_expr() -> ExpressionRef
+    {
+        Self::new(unsafe { std::mem::MaybeUninit::<BinaryenExpression>::uninit().as_mut_ptr() })
+    }
+    pub fn print(&self)
+    {
+        unsafe { BinaryenExpressionPrint(self.inner) }
     }
 }
 #[derive(Debug)]
@@ -846,6 +854,301 @@ impl Module
     {
         ExpressionRef::new(unsafe { BinaryenDataDrop(self.inner, segment.try_into().unwrap()) })
     }
+    pub fn ref_null(&mut self, type_: Type) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenRefNull(self.inner, type_.inner) })
+    }
+
+    pub fn ref_func(&mut self, rfunc: &str) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            let cfunc = CString::new(rfunc).unwrap();
+            BinaryenRefFunc(self.inner, cfunc.as_ptr())
+        })
+    }
+    pub fn make_i31(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenI31New(self.inner, value.inner) })
+    }
+    pub fn add_event(&mut self, name: &str, attribute: i32, params: Type, results: Type)
+        -> EventRef
+    {
+        EventRef::new(unsafe {
+            let cname = CString::new(name).unwrap();
+            BinaryenAddEvent(
+                self.inner,
+                cname.as_ptr(),
+                attribute.try_into().unwrap(),
+                params.inner,
+                results.inner,
+            )
+        })
+    }
+    pub fn throw(&mut self, event: &str, operands: Vec<ExpressionRef>) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            let mut inners = operands
+                .iter()
+                .map(|t| t.inner)
+                .collect::<Vec<BinaryenExpressionRef>>();
+
+            let cevent = CString::new(event).unwrap();
+            BinaryenThrow(
+                self.inner,
+                cevent.as_ptr(),
+                inners.as_mut_ptr(),
+                operands.len().try_into().unwrap(),
+            )
+        })
+    }
+    pub fn pop(&mut self, type_: Type) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenPop(self.inner, type_.inner) })
+    }
+    pub fn rethrow(&mut self, exnref: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenRethrow(self.inner, exnref.inner) })
+    }
+    pub fn br_on_exn(
+        &mut self,
+        name: &str,
+        event_name: &str,
+        exnref: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            let cname = CString::new(name).unwrap();
+            let cevent_name = CString::new(event_name).unwrap();
+            BinaryenBrOnExn(
+                self.inner,
+                cname.as_ptr(),
+                cevent_name.as_ptr(),
+                exnref.inner,
+            )
+        })
+    }
+    pub fn r#if(
+        &mut self,
+        condition: ExpressionRef,
+        if_true: ExpressionRef,
+        if_false: Option<ExpressionRef>,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            match if_false {
+                Some(z) => BinaryenIf(self.inner, condition.inner, if_true.inner, z.inner),
+                None => BinaryenIf(
+                    self.inner,
+                    condition.inner,
+                    if_true.inner,
+                    std::mem::MaybeUninit::<BinaryenExpression>::uninit().as_mut_ptr(),
+                ),
+            }
+        })
+    }
+    pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef
+    {
+        unsafe {
+            ExpressionRef::new(BinaryenLoop(
+                self.inner,
+                CString::new(ins).unwrap().as_ptr(),
+                body.inner,
+            ))
+        }
+    }
+
+    pub fn r#break(
+        &mut self,
+        name: &str,
+        condition: Option<ExpressionRef>,
+        value: Option<ExpressionRef>,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            let cins = CString::new(name).unwrap();
+            match condition {
+                Some(cond) => match value {
+                    Some(v) => BinaryenBreak(self.inner, cins.as_ptr(), cond.inner, v.inner),
+                    None => BinaryenBreak(
+                        self.inner,
+                        cins.as_ptr(),
+                        cond.inner,
+                        ExpressionRef::null_expr().inner,
+                    ),
+                },
+                None => match value {
+                    Some(v) => BinaryenBreak(
+                        self.inner,
+                        cins.as_ptr(),
+                        ExpressionRef::null_expr().inner,
+                        v.inner,
+                    ),
+                    None => BinaryenBreak(
+                        self.inner,
+                        cins.as_ptr(),
+                        ExpressionRef::null_expr().inner,
+                        ExpressionRef::null_expr().inner,
+                    ),
+                },
+            }
+        })
+    }
+
+    pub fn r#switch(
+        &mut self,
+        names: Vec<&str>,
+        default_name: &str,
+        condition: ExpressionRef,
+        value: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        let mut cnames = names
+            .iter()
+            .map(|&n| CString::new(n).unwrap().as_ptr())
+            .collect::<Vec<*const std::os::raw::c_char>>();
+        ExpressionRef::new(unsafe {
+            BinaryenSwitch(
+                self.inner,
+                cnames.as_mut_ptr(),
+                cnames.len().try_into().unwrap(),
+                CString::new(default_name).unwrap().as_ptr(),
+                condition.inner,
+                value.inner,
+            )
+        })
+    }
+    pub fn r#call(
+        &mut self,
+        target: &str,
+        operands: Vec<ExpressionRef>,
+        return_type: Type,
+    ) -> ExpressionRef
+    {
+        let mut inners = operands
+            .iter()
+            .map(|o| o.inner)
+            .collect::<Vec<BinaryenExpressionRef>>();
+
+        ExpressionRef::new(unsafe {
+            BinaryenCall(
+                self.inner,
+                CString::new(target).unwrap().as_ptr(),
+                inners.as_mut_ptr(),
+                operands.len().try_into().unwrap(),
+                return_type.inner,
+            )
+        })
+    }
+    pub fn call_indirect(
+        &mut self,
+        target: ExpressionRef,
+        operands: Vec<ExpressionRef>,
+        params: Type,
+        results: Type,
+    ) -> ExpressionRef
+    {
+        let mut operands_inners = operands
+            .iter()
+            .map(|o| o.inner)
+            .collect::<Vec<BinaryenExpressionRef>>();
+
+        ExpressionRef::new(unsafe {
+            BinaryenCallIndirect(
+                self.inner,
+                target.inner,
+                operands_inners.as_mut_ptr(),
+                operands.len().try_into().unwrap(),
+                params.inner,
+                results.inner,
+            )
+        })
+    }
+    pub fn tee_local(&mut self, index: i32, value: ExpressionRef, type_: Type) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenLocalTee(self.inner, index as u32, value.inner, type_.inner)
+        })
+    }
+    pub fn load(
+        &mut self,
+        bytes: i32,
+        signed: i8,
+        offset: i32,
+        align: i32,
+        type_: Type,
+        ptr: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenLoad(
+                self.inner,
+                bytes.try_into().unwrap(),
+                signed,
+                offset.try_into().unwrap(),
+                align.try_into().unwrap(),
+                type_.inner,
+                ptr.inner,
+            )
+        })
+    }
+    pub fn store(
+        &mut self,
+        bytes: i32,
+        offset: i32,
+        align: i32,
+        ptr: ExpressionRef,
+        value: ExpressionRef,
+        type_: Type,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenStore(
+                self.inner,
+                bytes.try_into().unwrap(),
+                offset.try_into().unwrap(),
+                align.try_into().unwrap(),
+                ptr.inner,
+                value.inner,
+                type_.inner,
+            )
+        })
+    }
+    pub fn select(&mut self, condition: ExpressionRef, if_true: ExpressionRef, if_false: ExpressionRef, type_: Type) -> ExpressionRef{
+        ExpressionRef::new(unsafe {
+            BinaryenSelect(self.inner, condition.inner, if_true.inner, if_false.inner, type_.inner)
+        })
+    }
+    pub fn r#return(&mut self, value: ExpressionRef) -> ExpressionRef {
+        ExpressionRef::new(unsafe {
+            BinaryenReturn(self.inner, value.inner)
+        })
+    }
+    pub fn return_call(&mut self, target: &str, operands: Vec<ExpressionRef>, return_type: Type) -> ExpressionRef{
+        let mut operands_inners = operands
+            .iter()
+            .map(|o| o.inner)
+            .collect::<Vec<BinaryenExpressionRef>>();
+            ExpressionRef::new(unsafe {
+                let ctarget = CString::new(target).unwrap().as_ptr();
+                BinaryenReturnCall(self.inner, ctarget, operands_inners.as_mut_ptr(), operands.len().try_into().unwrap(), return_type.inner)
+            })
+    }
+    pub fn return_call_indirect(&mut self, target: ExpressionRef, operands: Vec<ExpressionRef>, params: Type, result_type: Type) -> ExpressionRef{
+        let mut operands_inners = operands
+        .iter()
+        .map(|o| o.inner)
+        .collect::<Vec<BinaryenExpressionRef>>();
+
+
+        ExpressionRef::new(unsafe {
+            BinaryenReturnCallIndirect(self.inner, target.inner, operands_inners.as_mut_ptr(), operands.len().try_into().unwrap(), params.inner, result_type.inner)
+        })
+    }
+    // pub fn null_ptr_exp() -> ExpressionRef{
+    //     ExpressionRef::new(unsafe {
+    //         std::ptr::null::<BinaryenExpressionRef>()
+    //     })
+    // }
 }
 impl Drop for Module
 {
@@ -929,18 +1232,18 @@ impl Type
             inner: { unsafe { BinaryenTypeAuto() } },
         };
     }
-    // pub fn i31_ref() -> Self
-    // {
-    //     return Self {
-    //         inner: { unsafe { BinaryenTypeI31ref() } },
-    //     };
-    // }
-    // pub fn eqref() -> Self
-    // {
-    //     return Self {
-    //         inner: { unsafe { BinaryenType() } },
-    //     };
-    // }
+    pub fn i31ref() -> Self
+    {
+        return Self {
+            inner: { unsafe { BinaryenTypeI31ref() } },
+        };
+    }
+    pub fn eqref() -> Self
+    {
+        return Self {
+            inner: { unsafe { BinaryenTypeEqref() } },
+        };
+    }
 
     pub fn create(value_types: Vec<Type>) -> Self
     {
@@ -1006,6 +1309,17 @@ impl Features
     impl_feature!(reference_types, BinaryenFeatureReferenceTypes);
     impl_feature!(multi_value, BinaryenFeatureMultivalue);
     impl_feature!(gc, BinaryenFeatureGC);
-    /* TODO: get this working impl_feature!(memory_64, BinaryenFeatureMemory64, 2048); */
+    impl_feature!(memory_64, BinaryenFeatureMemory64);
     impl_feature!(feature_all, BinaryenFeatureAll);
+}
+pub struct EventRef
+{
+    inner: BinaryenEventRef,
+}
+impl EventRef
+{
+    fn new(e: BinaryenEventRef) -> Self
+    {
+        Self { inner: e }
+    }
 }
