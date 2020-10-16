@@ -142,11 +142,11 @@ fn test_types() {
         println!("  // BinaryenTypeEqref: {:?}\n", eqref);
         assert!(eqref.arity() == 1);
     }
-    {
+    
         let mut i31ref = Type::i31ref();
         println!("  // BinaryenTypeI31Ref: {:?}\n", i31ref);
         assert!(i31ref.arity() == 1);
-    }
+    
     {
         println!("  // BinaryenTypeAuto: {:?}", Type::auto())
     }
@@ -189,7 +189,6 @@ fn test_features() {
 #[test]
 fn test_core() {
     let mut module = Module::new();
-
     let (ConstI32, ConstI64, ConstF32, ConstF64, ConstF32Bits, ConstF64Bits) = (
         module.make_const(Literal::int_32(1)),
         module.make_const(Literal::int_64(2)),
@@ -310,96 +309,79 @@ fn test_core() {
             make_unary(&mut module, Op::$name(), $type)
         };
     }
-    unop!(clz_int32, i32_);
-    unop!(ctz_int32, i32_);
-
-    binop!(add_int32, i32_);
-    binop![add_int64, i64_];
-
-    //TODO: Fill the rest of the operators in
-
-    make_memory_init(&mut module);
-    make_data_drop(&mut module);
-    make_memory_copy(&mut module);
-    make_memory_fill(&mut module);
-    module.r#if(temp1, temp2, Some(temp3));
-    module.r#if(temp4, temp5, None); //TODO: Get actuall null pointer owrking (ln 680)
-    let mut value_list = vec![];
-    let l1 = {
-        let temp = make_int_32(&mut module, 0);
-        module.r#loop("in", temp)
-    };
-    let l2 = {
-        let temp = make_int_32(&mut module, 0);
-        module.r#loop("z", temp)
-    };
-    let b0 = module.r#break("the-value", Some(temp6), Some(temp7));
-    let b1 = {
-        let temp = make_int_32(&mut module, 2);
-        module.r#break("the-nothing", Some(temp), None)
-    };
-    let b2 = {
-        let temp = make_int_32(&mut module, 3);
-        module.r#break("the-value", None, Some(temp))
-    };
-    let b3 = {
-        // let temp = make_int_32(&mut module, 3);
-        module.r#break("the-nothing", None, None)
-    };
-    let s0 = module.switch(switch_value_names, "the-value", temp8, temp9);
-    let s1 = {
-        let temp = make_int_32(&mut module, 2);
-        module.switch(
-            switch_body_names,
-            "the-nothing",
-            temp,
-            ExpressionRef::null_expr(),
-        )
-    };
-    let called = {
-        let val = module.r#call("kitchen()sinker", call_operands4, Type::int_32());
-        module.unary(Op::eq_z_int32(), val)
-    };
-    let u = {
-        let v = module.r#call("an-imported", call_operands2, Type::float_32());
-        let val = module.unary(Op::trunc_s_float32_to_int32(), v);
-        module.unary(Op::eq_z_int32(), val)
-    };
-    let u2 = {
-        let m = make_int_32(&mut module, 2449);
-        let indirectly_called = module.call_indirect(m, call_operands4b, iIfF, Type::int_32());
-        module.unary(Op::eq_z_int32(), indirectly_called)
-    };
-    let d = {
-        let l0 = module.get_local(0, Type::int_32());
-        module.drop_var(l0)
-    };
-
-    let ls = {
-        let i = make_int_32(&mut module, 101);
-        module.set_local(0, i)
-    };
-
-    let lt = {
-        let i = make_int_32(&mut module, 102);
-        module.tee_local(0, i, Type::int_32())
-    };
-
-    // value_list.push(l1);
-    // value_list.push(l2);
-    // value_list.push(b0);
-    // value_list.push(b1);
-    // value_list.push(b2);
-    // value_list.push(b3);
-    // value_list.push(s0);
-    // value_list.push(s1);
-    // value_list.push(called);
-    // value_list.push(u);
-    // value_list.push(u2);
-    // value_list.push(d);
-    // value_list.push(ls);
-    // value_list.push(lt);
-    value_list.append(&mut vec![
+    let mut value_list = vec![
+        unop!(clz_int32, i32_),
+        unop!(ctz_int32, i32_),
+        //TODO: Fill the rest of the operators in
+        binop!(add_int32, i32_),
+        binop![add_int64, i64_],
+        make_memory_init(&mut module),
+        make_data_drop(&mut module),
+        make_memory_copy(&mut module),
+        make_memory_fill(&mut module),
+        module.r#if(temp1, temp2, Some(temp3)),
+        module.r#if(temp4, temp5, None),
+        {
+            let temp = make_int_32(&mut module, 0);
+            module.r#loop("in", temp)
+        },
+        {
+            let temp = make_int_32(&mut module, 0);
+            module.r#loop("z", temp)
+        },
+        module.r#break("the-value", Some(temp6), Some(temp7)),
+        {
+            let temp = make_int_32(&mut module, 2);
+            module.r#break("the-nothing", Some(temp), None)
+        },
+        {
+            let temp = make_int_32(&mut module, 2);
+            module.r#break("the-nothing", Some(temp), None)
+        },
+        {
+            let temp = make_int_32(&mut module, 3);
+            module.r#break("the-value", None, Some(temp))
+        },
+        {
+            // let temp = make_int_32(&mut module, 3);
+            module.r#break("the-nothing", None, None)
+        },
+        module.switch(switch_value_names, "the-value", temp8, temp9),
+        {
+            let temp = make_int_32(&mut module, 2);
+            module.switch(
+                switch_body_names,
+                "the-nothing",
+                temp,
+                ExpressionRef::null_expr(),
+            )
+        },
+        {
+            let val = module.r#call("kitchen()sinker", call_operands4, Type::int_32());
+            module.unary(Op::eq_z_int32(), val)
+        },
+        {
+            let v = module.r#call("an-imported", call_operands2, Type::float_32());
+            let val = module.unary(Op::trunc_s_float32_to_int32(), v);
+            module.unary(Op::eq_z_int32(), val)
+        },
+        {
+            let m = make_int_32(&mut module, 2449);
+            let indirectly_called = module.call_indirect(m, call_operands4b, iIfF, Type::int_32());
+            module.unary(Op::eq_z_int32(), indirectly_called)
+        },
+        {
+            let l0 = module.get_local(0, Type::int_32());
+            module.drop_var(l0)
+        },
+        {
+            let i = make_int_32(&mut module, 101);
+            module.set_local(0, i)
+        },
+        {
+            let i = make_int_32(&mut module, 102);
+            module.tee_local(0, i, Type::int_32())
+        },
         {
             let i = make_int_32(&mut module, 2);
             module.load(4, 0, 0, 0, Type::int_32(), i)
@@ -408,15 +390,9 @@ fn test_core() {
             let i = make_int_32(&mut module, 9);
             module.load(8, 0, 2, 8, Type::int_32(), i)
         },
-        {
-            module.store(4,0,0,temp13,temp14, Type::int_32())
-        },
-        {
-            module.store(8,2,4,temp15,temp16, Type::int_64())
-        },
-        {
-            module.select(temp10, temp11, temp12, Type::auto())
-        },
+        { module.store(4, 0, 0, temp13, temp14, Type::int_32()) },
+        { module.store(8, 2, 4, temp15, temp16, Type::int_64()) },
+        { module.select(temp10, temp11, temp12, Type::auto()) },
         {
             let i = make_int_32(&mut module, 1337);
             module.r#return(i)
@@ -441,14 +417,94 @@ fn test_core() {
             let target = make_int_32(&mut module, 2499);
             module.return_call_indirect(target, call_operands4b, iIfF, Type::int_32())
             // call_operands4b,
+        },
+        //Reference types
+        { module.ref_is_null(externrefExpr) },
+        { module.ref_is_null(funcrefExpr) },
+        { module.ref_is_null(exnref) },
+        {
+            let t = module.ref_null(Type::funcref());
+            let f = module.ref_func("kitchen()sinker");
+            module.select(temp10, t, f, Type::funcref())
+        },
+        //Gc
+        {
+            let l = module.ref_null(Type::eqref());
+            let r = module.ref_null(Type::eqref());
 
-        }
+            module.ref_eq(l, r)
+        },
+        //Exception handling
+        { module.r#try(try_body, catch_body) },
+        //Atomics
+        {
+            let ld = module.atomic_load(4, 0, Type::int_32(), temp6);
+            module.atomic_store(4, 0, temp6, ld, Type::int_32())
+        },
+        {
+            let baw = module.atomic_wait(temp6, temp6, temp16, Type::int_32());
+            module.drop_var(baw)
+        },
+        {
+            let ban = module.atomic_notify(temp6, temp6);
+            module.drop_var(ban)
+        },
+        { module.atomic_fence() },
+        //tuples
+        { module.make_tuple(tuple_elements4a) },
+        {
+            let tuple_elements4a = vec![
+                make_int_32(&mut module, 13),
+                make_int_64(&mut module, 37),
+                make_float_32(&mut module, 1.3f32),
+                make_float_64(&mut module, 3.7f64),
+            ];
+            let made = module.make_tuple(tuple_elements4a);
+            module.extract_tuple(made, 2)
+        },
+        //pop
+        { module.pop(Type::int_32()) },
+        { module.pop(Type::int_64()) },
+        { module.pop(Type::float_32()) },
+        { module.pop(Type::float_64()) },
+        { module.pop(Type::funcref()) },
+        { module.pop(Type::externref()) },
+        { module.pop(Type::exnref()) },
+        //memory
+        {
+            module.memory_size()
+        },
+        {
+            let i = make_int_32(&mut module, 2);
+            module.memory_grow(i)
+        },
+        // Gc
+        {
+            let i = make_int_32(&mut module, 0);
+            module.new_i31(i)
+        },
+        {
+            module.get_i31(i31ref,1)
+        },
+        {
+            let i = make_int_32(&mut module, 2);
+            let i31 = module.new_i31(i);
+            module.get_i31(i31, 0)
+        },
+        // Other
+        {
+            module.nop()
+        },
+        // {
+            // module.unreachable()
+        // }
+    ];
+    
+    value_list.get(3).unwrap().print();  // test printing a standalone expression
 
-    ]);
-
-
-    let blk = module.new_nameless_block(value_list, Type::none());
-    blk.print();
+    let value = module.new_block("the-value", value_list, Type::auto());
+    value.print();
+     
 }
 
 fn main() {

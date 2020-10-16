@@ -1113,35 +1113,201 @@ impl Module
             )
         })
     }
-    pub fn select(&mut self, condition: ExpressionRef, if_true: ExpressionRef, if_false: ExpressionRef, type_: Type) -> ExpressionRef{
+    pub fn select(
+        &mut self,
+        condition: ExpressionRef,
+        if_true: ExpressionRef,
+        if_false: ExpressionRef,
+        type_: Type,
+    ) -> ExpressionRef
+    {
         ExpressionRef::new(unsafe {
-            BinaryenSelect(self.inner, condition.inner, if_true.inner, if_false.inner, type_.inner)
+            BinaryenSelect(
+                self.inner,
+                condition.inner,
+                if_true.inner,
+                if_false.inner,
+                type_.inner,
+            )
         })
     }
-    pub fn r#return(&mut self, value: ExpressionRef) -> ExpressionRef {
-        ExpressionRef::new(unsafe {
-            BinaryenReturn(self.inner, value.inner)
-        })
+    pub fn r#return(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenReturn(self.inner, value.inner) })
     }
-    pub fn return_call(&mut self, target: &str, operands: Vec<ExpressionRef>, return_type: Type) -> ExpressionRef{
+    pub fn return_call(
+        &mut self,
+        target: &str,
+        operands: Vec<ExpressionRef>,
+        return_type: Type,
+    ) -> ExpressionRef
+    {
         let mut operands_inners = operands
             .iter()
             .map(|o| o.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
-            ExpressionRef::new(unsafe {
-                let ctarget = CString::new(target).unwrap().as_ptr();
-                BinaryenReturnCall(self.inner, ctarget, operands_inners.as_mut_ptr(), operands.len().try_into().unwrap(), return_type.inner)
-            })
+        ExpressionRef::new(unsafe {
+            let ctarget = CString::new(target).unwrap().as_ptr();
+            BinaryenReturnCall(
+                self.inner,
+                ctarget,
+                operands_inners.as_mut_ptr(),
+                operands.len().try_into().unwrap(),
+                return_type.inner,
+            )
+        })
     }
-    pub fn return_call_indirect(&mut self, target: ExpressionRef, operands: Vec<ExpressionRef>, params: Type, result_type: Type) -> ExpressionRef{
+    pub fn return_call_indirect(
+        &mut self,
+        target: ExpressionRef,
+        operands: Vec<ExpressionRef>,
+        params: Type,
+        result_type: Type,
+    ) -> ExpressionRef
+    {
         let mut operands_inners = operands
-        .iter()
-        .map(|o| o.inner)
-        .collect::<Vec<BinaryenExpressionRef>>();
-
+            .iter()
+            .map(|o| o.inner)
+            .collect::<Vec<BinaryenExpressionRef>>();
 
         ExpressionRef::new(unsafe {
-            BinaryenReturnCallIndirect(self.inner, target.inner, operands_inners.as_mut_ptr(), operands.len().try_into().unwrap(), params.inner, result_type.inner)
+            BinaryenReturnCallIndirect(
+                self.inner,
+                target.inner,
+                operands_inners.as_mut_ptr(),
+                operands.len().try_into().unwrap(),
+                params.inner,
+                result_type.inner,
+            )
+        })
+    }
+    pub fn ref_is_null(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenRefIsNull(self.inner, value.inner) })
+    }
+    pub fn ref_eq(&mut self, left: ExpressionRef, right: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenRefEq(self.inner, left.inner, right.inner) })
+    }
+    pub fn r#try(&mut self, body: ExpressionRef, catch: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenTry(self.inner, body.inner, catch.inner) })
+    }
+    pub fn atomic_store(
+        &mut self,
+        bytes: i32,
+        offset: i32,
+        ptr: ExpressionRef,
+        value: ExpressionRef,
+        type_: Type,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenAtomicStore(
+                self.inner,
+                bytes.try_into().unwrap(),
+                offset.try_into().unwrap(),
+                ptr.inner,
+                value.inner,
+                type_.inner,
+            )
+        })
+    }
+    pub fn atomic_load(
+        &mut self,
+        bytes: i32,
+        offset: i32,
+        type_: Type,
+        ptr: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenAtomicLoad(
+                self.inner,
+                bytes.try_into().unwrap(),
+                offset.try_into().unwrap(),
+                type_.inner,
+                ptr.inner,
+            )
+        })
+    }
+    pub fn atomic_wait(
+        &mut self,
+        ptr: ExpressionRef,
+        expected: ExpressionRef,
+        timeout: ExpressionRef,
+        type_: Type,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenAtomicWait(
+                self.inner,
+                ptr.inner,
+                expected.inner,
+                timeout.inner,
+                type_.inner,
+            )
+        })
+    }
+    pub fn atomic_notify(
+        &mut self,
+        ptr: ExpressionRef,
+        notify_count: ExpressionRef,
+    ) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenAtomicNotify(self.inner, ptr.inner, notify_count.inner)
+        })
+    }
+    pub fn atomic_fence(&mut self) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenAtomicFence(self.inner) })
+    }
+    pub fn make_tuple(&mut self, operands: Vec<ExpressionRef>) -> ExpressionRef
+    {
+        let mut operands_inners = operands
+            .iter()
+            .map(|o| o.inner)
+            .collect::<Vec<BinaryenExpressionRef>>();
+
+        ExpressionRef::new(unsafe {
+            BinaryenTupleMake(
+                self.inner,
+                operands_inners.as_mut_ptr(),
+                operands.len().try_into().unwrap(),
+            )
+        })
+    }
+    pub fn extract_tuple(&mut self, tuple: ExpressionRef, index: i32) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            BinaryenTupleExtract(self.inner, tuple.inner, index.try_into().unwrap())
+        })
+    }
+    pub fn memory_size(&mut self) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenMemorySize(self.inner) })
+    }
+    pub fn memory_grow(&mut self, delta: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenMemoryGrow(self.inner, delta.inner) })
+    }
+    pub fn new_i31(&mut self, value: ExpressionRef) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenI31New(self.inner, value.inner) })
+    }
+    pub fn get_i31(&mut self, i31: ExpressionRef, signed: i32) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenI31Get(self.inner, i31.inner, signed) })
+    }
+    pub fn nop(&mut self) -> ExpressionRef {
+        ExpressionRef::new(unsafe {
+            BinaryenNop(self.inner)
+        })
+    }
+    pub fn unreachable(&mut self) -> ExpressionRef {
+        ExpressionRef::new(unsafe {
+            BinaryenUnreachable(self.inner)
         })
     }
     // pub fn null_ptr_exp() -> ExpressionRef{
