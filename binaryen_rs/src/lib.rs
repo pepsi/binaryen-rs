@@ -540,7 +540,7 @@ impl ExpressionRef
     }
     pub fn null_expr() -> ExpressionRef
     {
-        Self::new(unsafe { std::mem::MaybeUninit::<BinaryenExpression>::uninit().as_mut_ptr() })
+        Self::new(std::ptr::null_mut::<BinaryenExpression>())
     }
     pub fn print(&self)
     {
@@ -632,14 +632,14 @@ impl Module
         results: Type,
         var_types: Vec<Type>,
         body: ExpressionRef,
-    )
+    ) -> FunctionRef
     {
         let mut inners = var_types
             .iter()
             .map(|t| t.inner)
             .collect::<Vec<BinaryenType>>();
 
-        unsafe {
+        FunctionRef::new(unsafe {
             BinaryenAddFunction(
                 self.inner,
                 CString::new(name).unwrap().as_ptr(),
@@ -648,8 +648,8 @@ impl Module
                 inners.as_mut_ptr(),
                 var_types.len().try_into().unwrap(),
                 body.inner,
-            );
-        }
+            )
+        })
     }
     /// Bool whether the validation was successful
     pub fn validate(&mut self) -> bool
@@ -730,14 +730,17 @@ impl Module
             )
         });
     }
-    #[deprecated = "Use add_export while I try to fix this"]
     pub fn add_function_export(&mut self, internal_name: &str, external_name: &str) -> Export
     {
-        let c_internal_name = CString::new(internal_name).unwrap().as_ptr();
-        let c_external_name = CString::new(external_name).unwrap().as_ptr();
+        let c_internal_name = CString::new(internal_name).unwrap();
+        let c_external_name = CString::new(external_name).unwrap();
 
         return Export::new(unsafe {
-            BinaryenAddFunctionExport(self.inner, c_internal_name, c_external_name)
+            BinaryenAddFunctionExport(
+                self.inner,
+                c_internal_name.as_ptr(),
+                c_external_name.as_ptr(),
+            )
         });
     }
     pub fn add_table_export(&mut self, internal_name: &str, external_name: &str) -> Export
@@ -931,19 +934,20 @@ impl Module
         &mut self,
         condition: ExpressionRef,
         if_true: ExpressionRef,
-        if_false: Option<ExpressionRef>,
+        if_false: ExpressionRef,
     ) -> ExpressionRef
     {
         ExpressionRef::new(unsafe {
-            match if_false {
-                Some(z) => BinaryenIf(self.inner, condition.inner, if_true.inner, z.inner),
-                None => BinaryenIf(
-                    self.inner,
-                    condition.inner,
-                    if_true.inner,
-                    std::mem::MaybeUninit::<BinaryenExpression>::uninit().as_mut_ptr(),
-                ),
-            }
+            BinaryenIf(self.inner, condition.inner, if_true.inner, if_false.inner)
+            // match if_false {
+            //     Some(z) => BinaryenIf(self.inner, condition.inner, if_true.inner, z.inner),
+            //     None => BinaryenIf(
+            //         self.inner,
+            //         condition.inner,
+            //         if_true.inner,
+            //         std::mem::MaybeUninit::<BinaryenExpression>::uninit().as_mut_ptr(),
+            //     ),
+            // }
         })
     }
     pub fn r#loop(&mut self, ins: &str, body: ExpressionRef) -> ExpressionRef
@@ -1147,10 +1151,10 @@ impl Module
             .map(|o| o.inner)
             .collect::<Vec<BinaryenExpressionRef>>();
         ExpressionRef::new(unsafe {
-            let ctarget = CString::new(target).unwrap().as_ptr();
+            let ctarget = CString::new(target).unwrap();
             BinaryenReturnCall(
                 self.inner,
-                ctarget,
+                ctarget.as_ptr(),
                 operands_inners.as_mut_ptr(),
                 operands.len().try_into().unwrap(),
                 return_type.inner,
@@ -1300,21 +1304,142 @@ impl Module
     {
         ExpressionRef::new(unsafe { BinaryenI31Get(self.inner, i31.inner, signed) })
     }
-    pub fn nop(&mut self) -> ExpressionRef {
-        ExpressionRef::new(unsafe {
-            BinaryenNop(self.inner)
+    pub fn nop(&mut self) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenNop(self.inner) })
+    }
+    pub fn unreachable(&mut self) -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe { BinaryenUnreachable(self.inner) })
+    }
+    //TODO: Use bool instead of i8
+    pub fn add_global(
+        &mut self,
+        name: &str,
+        type_: Type,
+        mutable: i8,
+        init: ExpressionRef,
+    ) -> GlobalRef
+    {
+        GlobalRef::new(unsafe {
+            let cname = CString::new(name).unwrap();
+            BinaryenAddGlobal(self.inner, cname.as_ptr(), type_.inner, mutable, init.inner)
         })
     }
-    pub fn unreachable(&mut self) -> ExpressionRef {
-        ExpressionRef::new(unsafe {
-            BinaryenUnreachable(self.inner)
-        })
+    pub fn add_function_import(
+        &mut self,
+        internal_name: &str,
+        external_module_name: &str,
+        external_base_name: &str,
+        params: Type,
+        result: Type,
+    )
+    {
+        unsafe {
+            let c_internal_name = CString::new(internal_name).unwrap();
+            let c_external_module_name = CString::new(external_module_name).unwrap();
+            let c_external_base_name = CString::new(external_base_name).unwrap();
+            BinaryenAddFunctionImport(
+                self.inner,
+                c_internal_name.as_ptr(),
+                c_external_module_name.as_ptr(),
+                c_external_base_name.as_ptr(),
+                params.inner,
+                result.inner,
+            );
+        }
     }
-    // pub fn null_ptr_exp() -> ExpressionRef{
-    //     ExpressionRef::new(unsafe {
-    //         std::ptr::null::<BinaryenExpressionRef>()
-    //     })
-    // }
+    pub fn set_function_table(
+        &mut self,
+        initial: u32,
+        maximum: u32,
+        func_names: Vec<&str>,
+        offset: ExpressionRef,
+    )
+    {
+        unsafe {
+            let mut c_func_names = vec![];
+            for n in func_names {
+                let c = CString::new(n).unwrap();
+                c_func_names.push(c)
+            }
+            // unsafe {
+            BinaryenSetFunctionTable(
+                self.inner,
+                initial,
+                maximum,
+                c_func_names
+                    .iter()
+                    .map(|c| c.as_ptr())
+                    .collect::<Vec<*const i8>>()
+                    .as_mut_ptr(),
+                c_func_names.len().try_into().unwrap(),
+                offset.inner,
+            )
+            // }
+        }
+    }
+    //TODO: More docs on this black box
+    pub fn set_memory(
+        &mut self,
+        initial: u32,
+        maximum: u32,
+        export_name: &str,
+        mut segments: Vec<&str>,
+        mut segment_passive: Vec<i8>,
+        segment_offsets: Vec<ExpressionRef>,
+        mut segment_sizes: Vec<u32>,
+        shared: bool,
+    )
+    {
+        let mut csegs = vec![];
+        for s in segments {
+            csegs.push(CString::new(s).unwrap());
+        }
+        unsafe {
+            let en = CString::new(export_name).unwrap();
+
+            let mut offset_inners = segment_offsets
+                .iter()
+                .map(|e| e.inner)
+                .collect::<Vec<BinaryenExpressionRef>>();
+
+            BinaryenSetMemory(
+                self.inner,
+                initial,
+                maximum,
+                en.as_ptr(),
+                csegs.iter().map(|s| s.as_ptr()).collect::<Vec<*const i8>>().as_mut_ptr(),
+                segment_passive.as_mut_ptr(),
+                offset_inners.as_mut_ptr(),
+                segment_sizes.as_mut_ptr(),
+                csegs.len().try_into().unwrap(),
+                if shared { 1 } else { 0 },
+            )
+        }
+    }
+    pub fn set_start(&mut self, start: FunctionRef){
+        unsafe {
+            BinaryenSetStart(self.inner, start.inner)
+        }
+    }
+    pub fn auto_drop(&mut self){
+     unsafe {
+         BinaryenModuleAutoDrop(self.inner)
+     }   
+    }
+    pub fn set_features(&mut self, features: i32){
+        unsafe {
+            BinaryenModuleSetFeatures(self.inner, features as u32)
+        }
+    }
+    pub fn get_features(&mut self) -> Features{
+        Features{
+            inner: unsafe {
+                BinaryenModuleGetFeatures(self.inner)
+            }
+        }
+    }
 }
 impl Drop for Module
 {
@@ -1323,14 +1448,17 @@ impl Drop for Module
         unsafe { BinaryenModuleDispose(self.inner) }
     }
 }
-// pub struct ModuleRef{
-//     inner: BinaryenModuleRef
-// }
-// impl ModuleRef{
-//     fn new(x: BinaryenModuleRef) -> Self{
-//         Self{inner: x}
-//     }
-// }
+pub struct GlobalRef
+{
+    inner: BinaryenGlobalRef,
+}
+impl GlobalRef
+{
+    fn new(g: BinaryenGlobalRef) -> Self
+    {
+        Self { inner: g }
+    }
+}
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Type
 {
@@ -1431,7 +1559,7 @@ impl Type
         unsafe { BinaryenTypeArity(self.inner) }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Features
 {
     inner: BinaryenFeatures,
@@ -1480,12 +1608,30 @@ impl Features
 }
 pub struct EventRef
 {
-    inner: BinaryenEventRef,
+    pub inner: BinaryenEventRef,
 }
 impl EventRef
 {
     fn new(e: BinaryenEventRef) -> Self
     {
         Self { inner: e }
+    }
+}
+
+pub struct FunctionRef
+{
+    inner: BinaryenFunctionRef,
+}
+impl FunctionRef
+{
+    fn new(e: BinaryenFunctionRef) -> Self
+    {
+        Self { inner: e }
+    }
+    pub fn get_name(&self) -> &str
+    {
+        let c_buf = unsafe { BinaryenFunctionGetName(self.inner) };
+        let c_str = unsafe { std::ffi::CStr::from_ptr(c_buf) };
+        c_str.to_str().unwrap()
     }
 }

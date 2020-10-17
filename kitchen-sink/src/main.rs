@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
+use std::convert::TryInto;
+
 use binaryen_rs::*;
 lazy_static! {
     static ref v128_byes: Vec<i128> =
@@ -142,11 +144,11 @@ fn test_types() {
         println!("  // BinaryenTypeEqref: {:?}\n", eqref);
         assert!(eqref.arity() == 1);
     }
-    
-        let mut i31ref = Type::i31ref();
-        println!("  // BinaryenTypeI31Ref: {:?}\n", i31ref);
-        assert!(i31ref.arity() == 1);
-    
+
+    let mut i31ref = Type::i31ref();
+    println!("  // BinaryenTypeI31Ref: {:?}\n", i31ref);
+    assert!(i31ref.arity() == 1);
+
     {
         println!("  // BinaryenTypeAuto: {:?}", Type::auto())
     }
@@ -310,17 +312,17 @@ fn test_core() {
         };
     }
     let mut value_list = vec![
-        unop!(clz_int32, i32_),
-        unop!(ctz_int32, i32_),
-        //TODO: Fill the rest of the operators in
-        binop!(add_int32, i32_),
-        binop![add_int64, i64_],
+        // unop!(clz_int32, i32_),
+        // unop!(ctz_int32, i32_),
+        // //TODO: Fill the rest of the operators in
+        // binop!(add_int32, i32_),
+        // binop![add_int64, i64_],
         make_memory_init(&mut module),
         make_data_drop(&mut module),
         make_memory_copy(&mut module),
         make_memory_fill(&mut module),
-        module.r#if(temp1, temp2, Some(temp3)),
-        module.r#if(temp4, temp5, None),
+        module.r#if(temp1, temp2, temp3),
+        module.r#if(temp4, temp5, ExpressionRef::null_expr()),
         {
             let temp = make_int_32(&mut module, 0);
             module.r#loop("in", temp)
@@ -471,9 +473,7 @@ fn test_core() {
         { module.pop(Type::externref()) },
         { module.pop(Type::exnref()) },
         //memory
-        {
-            module.memory_size()
-        },
+        { module.memory_size() },
         {
             let i = make_int_32(&mut module, 2);
             module.memory_grow(i)
@@ -483,28 +483,97 @@ fn test_core() {
             let i = make_int_32(&mut module, 0);
             module.new_i31(i)
         },
-        {
-            module.get_i31(i31ref,1)
-        },
+        { module.get_i31(i31ref, 1) },
         {
             let i = make_int_32(&mut module, 2);
             let i31 = module.new_i31(i);
             module.get_i31(i31, 0)
         },
         // Other
-        {
-            module.nop()
-        },
-        // {
-            // module.unreachable()
-        // }
+        { module.nop() },
+        { module.unreachable() },
     ];
-    
-    value_list.get(3).unwrap().print();  // test printing a standalone expression
 
+    value_list.get(3).unwrap().print(); // test printing a standalone expression
+                                        // Make the main body of the function. and one block with a return value, one without
     let value = module.new_block("the-value", value_list, Type::auto());
-    value.print();
-     
+    let dropped_value = module.drop_var(value);
+    let nothing = module.new_block("the-nothing", vec![dropped_value], Type::none());
+    let body_list = vec![nothing, make_int_32(&mut module, 42)];
+    let body = module.new_block("the-body", body_list, Type::auto());
+    // Create the function
+    let local_types = [Type::int_32(); 2].to_vec();
+    let sinker = module.add_function("kitchen()sinker", iIfF, Type::int_32(), local_types, body);
+
+    // Globals
+    {
+        let i = make_int_32(&mut module, 7);
+        module.add_global("a-global", Type::int_32(), 0, i);
+    }
+    {
+        let i = make_float_32(&mut module, 7.5f32);
+        module.add_global("a-mutable-global", Type::float_32(), 0, i);
+    }
+    // Imports
+    let iF = Type::create(vec![Type::int_32(), Type::float_64()]);
+    module.add_function_import("an-imported", "module", "base", iF, Type::float_32());
+
+    // Exports
+    module.add_function_export("kitchen()sinker", "kitchen_sinker");
+
+    // Function table. One per module
+    let func_names = vec![sinker.get_name()];
+    println!("func_names = {:#?}", func_names);
+
+    {
+        let offset = module.make_const(Literal::int_32(0));
+        module.set_function_table(1, 1, func_names, offset);
+    }
+    //Memory.  One per module
+    //TODO: Try to provide higher level api, something like abstracting away vec length.
+    // let hw = std::ffi::CString::new("hello, world").unwrap();
+    // let ip = std::ffi::CString::new("im passive").unwrap();
+    let segments = vec!["hello, world", "im passive"];
+    println!("segments = {:?}", segments);
+    // panic!();
+    let segment_passive: Vec<i8> = vec![0, 1];
+    let segment_offsets = vec![
+        module.make_const(Literal::int_32(10)),
+        ExpressionRef::null_expr(),
+    ];
+
+    let segment_sizes = vec![12, 12];
+    module.set_memory(
+        1,
+        256,
+        "exported_mem",
+        segments,
+        segment_passive,
+        segment_offsets,
+        segment_sizes,
+        true,
+    );
+
+    // Start function. One per module
+
+    let starter = {
+        let nop = module.nop();
+        module.add_function("starter", Type::none(), Type::none(), vec![], nop)
+    };
+
+    module.set_start(starter);
+
+    // A bunch of our code needs drop(), auto-add it
+    module.auto_drop();
+    let features = Features::feature_all();
+    module.set_features(features);
+    //TODO assert module.get_featres() == features
+
+
+
+    assert!(module.validate());
+    module.print();
+
 }
 
 fn main() {
