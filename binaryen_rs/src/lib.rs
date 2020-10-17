@@ -1409,7 +1409,11 @@ impl Module
                 initial,
                 maximum,
                 en.as_ptr(),
-                csegs.iter().map(|s| s.as_ptr()).collect::<Vec<*const i8>>().as_mut_ptr(),
+                csegs
+                    .iter()
+                    .map(|s| s.as_ptr())
+                    .collect::<Vec<*const i8>>()
+                    .as_mut_ptr(),
                 segment_passive.as_mut_ptr(),
                 offset_inners.as_mut_ptr(),
                 segment_sizes.as_mut_ptr(),
@@ -1418,27 +1422,27 @@ impl Module
             )
         }
     }
-    pub fn set_start(&mut self, start: FunctionRef){
-        unsafe {
-            BinaryenSetStart(self.inner, start.inner)
+    pub fn set_start(&mut self, start: FunctionRef)
+    {
+        unsafe { BinaryenSetStart(self.inner, start.inner) }
+    }
+    pub fn auto_drop(&mut self)
+    {
+        unsafe { BinaryenModuleAutoDrop(self.inner) }
+    }
+    pub fn set_features(&mut self, features: i32)
+    {
+        unsafe { BinaryenModuleSetFeatures(self.inner, features as u32) }
+    }
+    pub fn get_features(&mut self) -> Features
+    {
+        Features {
+            inner: unsafe { BinaryenModuleGetFeatures(self.inner) },
         }
     }
-    pub fn auto_drop(&mut self){
-     unsafe {
-         BinaryenModuleAutoDrop(self.inner)
-     }   
-    }
-    pub fn set_features(&mut self, features: i32){
-        unsafe {
-            BinaryenModuleSetFeatures(self.inner, features as u32)
-        }
-    }
-    pub fn get_features(&mut self) -> Features{
-        Features{
-            inner: unsafe {
-                BinaryenModuleGetFeatures(self.inner)
-            }
-        }
+    pub fn make_relooper(&mut self) -> BRelooperRef
+    {
+        BRelooperRef::new(unsafe { RelooperCreate(self.inner) })
     }
 }
 impl Drop for Module
@@ -1446,6 +1450,51 @@ impl Drop for Module
     fn drop(&mut self)
     {
         unsafe { BinaryenModuleDispose(self.inner) }
+    }
+}
+pub struct BLooperBlockRef
+{
+    inner: RelooperBlockRef,
+}
+impl BLooperBlockRef
+{
+    fn new(rb: RelooperBlockRef) -> Self
+    {
+        Self { inner: rb }
+    }
+}
+//TODO: Find better name for BRelooperRef
+pub struct BRelooperRef
+{
+    inner: RelooperRef,
+}
+impl BRelooperRef
+{
+    fn new(r: RelooperRef) -> Self
+    {
+        Self { inner: r }
+    }
+    pub fn add_block(&mut self, code: ExpressionRef) -> BLooperBlockRef
+    {
+        BLooperBlockRef::new(unsafe { RelooperAddBlock(self.inner, code.inner) })
+    }
+    //TODO: Consistently use i32 or u32, not both
+    pub fn render_and_dispose(&mut self, entry: BLooperBlockRef, label_helper: u32)
+        -> ExpressionRef
+    {
+        ExpressionRef::new(unsafe {
+            RelooperRenderAndDispose(self.inner, entry.inner, label_helper)
+        })
+    }
+    // Doesnt necessarily have to be in relooper, but I just think that its cleaner this way
+    pub fn add_branch(
+        from: &BLooperBlockRef,
+        to: &BLooperBlockRef,
+        condition: ExpressionRef,
+        code: ExpressionRef,
+    )
+    {
+        unsafe { RelooperAddBranch(from.inner, to.inner, condition.inner, code.inner) }
     }
 }
 pub struct GlobalRef
@@ -1460,9 +1509,27 @@ impl GlobalRef
     }
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum MType
+{
+    I32,
+    I64,
+    F32,
+    F64,
+    None_,
+    Auto,
+    Unreachable,
+    Funcref,
+    Externref,
+    Exnref,
+    I31Ref,
+    EqRef,
+    Multi,
+}
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Type
 {
     inner: BinaryenType,
+    pub matchable_type: MType,
 }
 impl Type
 {
@@ -1470,72 +1537,84 @@ impl Type
     {
         return Self {
             inner: { unsafe { BinaryenTypeInt32() } },
+            matchable_type: MType::I32,
         };
     }
     pub fn int_64() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeInt64() } },
+            matchable_type: MType::I64,
         };
     }
     pub fn float_32() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeFloat32() } },
+            matchable_type: MType::F32,
         };
     }
     pub fn float_64() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeFloat64() } },
+            matchable_type: MType::F64,
         };
     }
     pub fn none() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeNone() } },
+            matchable_type: MType::None_,
         };
     }
     pub fn unreachable() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeUnreachable() } },
+            matchable_type: MType::Unreachable,
         };
     }
     pub fn funcref() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeFuncref() } },
+            matchable_type: MType::Funcref,
         };
     }
     pub fn externref() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeExternref() } },
+            matchable_type: MType::Externref,
         };
     }
     pub fn exnref() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeExnref() } },
+            matchable_type: MType::Exnref,
         };
     }
     pub fn auto() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeAuto() } },
+            matchable_type: MType::Auto,
         };
     }
     pub fn i31ref() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeI31ref() } },
+            matchable_type: MType::I31Ref,
         };
     }
     pub fn eqref() -> Self
     {
         return Self {
             inner: { unsafe { BinaryenTypeEqref() } },
+            matchable_type: MType::EqRef,
         };
     }
 
@@ -1551,6 +1630,7 @@ impl Type
                     inners.as_mut_ptr(),
                     value_types.len().try_into().unwrap(),
                 ),
+                matchable_type: MType::Multi,
             }
         };
     }
