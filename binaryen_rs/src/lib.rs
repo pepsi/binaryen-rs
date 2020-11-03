@@ -791,7 +791,20 @@ impl Module
         };
         std::fs::write(filename, c.to_string_lossy().to_string()).unwrap();
     }
-    pub fn compile(&mut self) -> String
+    pub fn compile(&mut self) -> &str {
+        let c = unsafe {
+            let was_color_originally_enabled = BinaryenAreColorsEnabled();
+            let c= BinaryenModuleAllocateAndWrite(self.inner, std::ptr::null());
+            println!("c: {:?}\n", c);
+            println!("{:?}", 0x7f7afc00bde0 as *const i8);
+
+            std::ffi::CStr::from_ptr(c.binary as *const i8)
+        };
+        std::fs::write("testing", c.to_string_lossy().to_string()).unwrap();
+"   "
+        // c
+    }
+    pub fn compile_text(&mut self) -> String
     {
         let c = unsafe {
             let was_color_originally_enabled = BinaryenAreColorsEnabled();
@@ -1444,6 +1457,19 @@ impl Module
     {
         BRelooperRef::new(unsafe { RelooperCreate(self.inner) })
     }
+    
+}
+impl From<&str> for Module {
+    fn from(s: &str) -> Self {
+        return Module {
+            inner: unsafe {
+                let mut c = s.chars().map(|c| c as std::os::raw::c_char).collect::<Vec<std::os::raw::c_char>>();
+                let z = c.as_mut_ptr();
+                println!("{:?}", z);
+                BinaryenModuleRead(z ,s.len().try_into().unwrap())
+            }
+        }
+    }
 }
 impl Drop for Module
 {
@@ -1496,6 +1522,16 @@ impl BRelooperRef
     {
         unsafe { RelooperAddBranch(from.inner, to.inner, condition.inner, code.inner) }
     }
+    pub fn add_block_with_switch(&mut self, code: ExpressionRef, condition: ExpressionRef) -> BLooperBlockRef{
+        BLooperBlockRef::new(unsafe {
+            RelooperAddBlockWithSwitch(self.inner, code.inner, condition.inner)
+        })
+    }
+    pub fn add_branch_for_switch(from: &BLooperBlockRef, to: &BLooperBlockRef, mut indexes: Vec<u32>, code: ExpressionRef){
+        unsafe {
+            RelooperAddBranchForSwitch(from.inner, to.inner, indexes.as_mut_ptr(), indexes.len().try_into().unwrap(), code.inner)
+        }
+    }
 }
 pub struct GlobalRef
 {
@@ -1524,6 +1560,7 @@ pub enum MType
     I31Ref,
     EqRef,
     Multi,
+    Neg,
 }
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Type
@@ -1533,6 +1570,16 @@ pub struct Type
 }
 impl Type
 {
+    pub fn neg() -> Self {
+        return Self {
+            inner: {
+                unsafe{
+                    usize::MAX
+                }
+            },
+            matchable_type: MType::Neg
+        }
+    }
     pub fn int_32() -> Self
     {
         return Self {

@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, non_camel_case_types, non_upper_case_globals, non_snake_case,)]
 #[macro_use]
 extern crate lazy_static;
 use std::convert::TryInto;
@@ -8,10 +9,10 @@ lazy_static! {
 }
 fn make_unary(module: &mut Module, op: Op, input_type: Type) -> ExpressionRef {
     let c = match input_type.matchable_type {
-        I32 => module.make_const(Literal::int_32(-10)),
-        I64 => module.make_const(Literal::int_64(-22)),
-        F32 => module.make_const(Literal::float_32(-33.612f32)),
-        F64 => module.make_const(Literal::float_64(-9005.841f64)),
+        MType::I32 => module.make_const(Literal::int_32(-10)),
+        MType::I64 => module.make_const(Literal::int_64(-22)),
+        MType::F32 => module.make_const(Literal::float_32(-33.612f32)),
+        MType::F64 => module.make_const(Literal::float_64(-9005.841f64)),
         _ => {
             panic!();
         }
@@ -640,7 +641,7 @@ pub fn test_relooper() {
         let block0 = relooper.add_block(make_call_check(&mut module, 0));
         let block1 = relooper.add_block(make_call_check(&mut module, 1));
         let block2 = relooper.add_block(make_call_check(&mut module, 2));
-        binaryen_rs::BRelooperRef::add_branch(&block0, &block1, make_dropped_int_32(&mut module, 55), ExpressionRef::null_expr());
+        binaryen_rs::BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), ExpressionRef::null_expr());
         binaryen_rs::BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
 
         let body = relooper.render_and_dispose(block0, 0);
@@ -655,7 +656,7 @@ pub fn test_relooper() {
         let block1 = relooper.add_block(make_call_check(&mut module, 1));
         let block2 = relooper.add_block(make_call_check(&mut module, 2));
         let temp = make_dropped_int_32(&mut module, 10);
-        binaryen_rs::BRelooperRef::add_branch(&block0, &block1, make_dropped_int_32(&mut module, 55), temp);
+        binaryen_rs::BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 55), temp);
         binaryen_rs::BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 20));
 
         let body = relooper.render_and_dispose(block0, 0);
@@ -721,6 +722,7 @@ pub fn test_relooper() {
         let snker = module.add_function("loop-tail", Type::none(), Type::none(), local_types, body);
     }
     {
+        // nontrivial loop + phi to head
         let local_types = vec![Type::int_32()];
         let mut relooper = module.make_relooper();
         let block0 = relooper.add_block(make_call_check(&mut module, 0));
@@ -729,7 +731,7 @@ pub fn test_relooper() {
         let block3 = relooper.add_block(make_call_check(&mut module, 3));
         let block4 = relooper.add_block(make_call_check(&mut module, 4));
         let block5 = relooper.add_block(make_call_check(&mut module, 5));
-        let block6 = relooper.add_block(make_call_check(&mut module, 6));
+        let block6 = relooper block.add_block(make_call_check(&mut module, 6));
         binaryen_rs::BRelooperRef::add_branch(&block0, &block1, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 10));
         binaryen_rs::BRelooperRef::add_branch(&block1, &block2, make_int_32(&mut module, -2), ExpressionRef::null_expr());
         binaryen_rs::BRelooperRef::add_branch(&block1, &block6, ExpressionRef::null_expr(), make_dropped_int_32(&mut module, 20));
@@ -742,8 +744,81 @@ pub fn test_relooper() {
         let body = relooper.render_and_dispose(block0, 0);
         let sinker = module.add_function("non-trivial-loop-plus-phi-to-head", Type::none(), Type::none(), local_types, body);
     }
+    {
+        // switch
+        let local_types = vec![Type::int_32()];
+        let mut relooper = module.make_relooper();
+        let temp = make_int_32(&mut module, -99);
+        let block0 = relooper.add_block_with_switch(make_call_check(&mut module, 0), temp);
+        // TODO: this example is not very good, the blocks should end in a |return| as otherwise they
+        //       fall through to each other. A relooper should end in something that stops control
+        //       flow, if it doesn't have branches going out
+        let block1 = relooper.add_block(make_call_check(&mut module, 1));
+        let block2 = relooper.add_block(make_call_check(&mut module, 2));
+        let block3 = relooper.add_block(make_call_check(&mut module, 3));
+        let to_block1 = vec![2, 5];
+        binaryen_rs::BRelooperRef::add_branch_for_switch(&block0, &block1, to_block1, ExpressionRef::null_expr());
+        let to_block2 = vec![4];
+        binaryen_rs::BRelooperRef::add_branch_for_switch(&block0, &block2, to_block2, make_dropped_int_32(&mut module, 55));
+        binaryen_rs::BRelooperRef::add_branch_for_switch(&block0, &block3, vec![], ExpressionRef::null_expr());
+        let body = relooper.render_and_dispose(block0, 0);
+        let sinker = module.add_function("switch", Type::none(), Type::none(), local_types, body);
+    }
+    {
+        // duff's device
+        let local_types = vec![Type::int_32(), Type::int_32(), Type::int_64(), Type::int_32(), Type::float_32(), Type::float_64(), Type::int_32()];
+        let mut relooper = module.make_relooper();
+        let block0 = relooper.add_block(make_call_check(&mut module, 0));
+        let block1 = relooper.add_block(make_call_check(&mut module, 1));
+        let block2 = relooper.add_block(make_call_check(&mut module, 2));
+        binaryen_rs::BRelooperRef::add_branch(&block0, &block1, make_int_32(&mut module, 10), ExpressionRef::null_expr());
+        binaryen_rs::BRelooperRef::add_branch(&block0, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
+        binaryen_rs::BRelooperRef::add_branch(&block1, &block2, ExpressionRef::null_expr(), ExpressionRef::null_expr());
+        binaryen_rs::BRelooperRef::add_branch(&block2, &block1, ExpressionRef::null_expr(), ExpressionRef::null_expr());
+        let body = relooper.render_and_dispose(block0, 3); // use $3 as the helper var
+        let sinker = module.add_function("duffs-device", Type::none(), Type::none(), local_types, body);
+    }
+    {
+        //return in a block
+        let local_types = vec![Type::int_32()];
+
+        let mut relooper = module.make_relooper();
+        let ret = make_int_32(&mut module, 1337);
+        let list_list = vec![make_call_check(&mut module, 42), module.r#return(ret)];
+        let list = module.new_block("the-lst", list_list, Type::none());
+        let block = relooper.add_block(list);
+        let body = relooper.render_and_dispose(block, 0);
+        let sinker = module.add_function("return", Type::none(), Type::int_32(), local_types, body);
+    }
+
+    println!("raw:");
+    module.print();
+    assert!(module.validate())
     // assert!(module.validate());
 }
+#[test]
+pub fn test_binaryes() {
+    let mut module = Module::new();
+
+    let buffer = {
+        let ii = Type::create(vec![Type::int_32(), Type::int_32()]);
+        let x = module.get_local(0, Type::int_32());
+        let y = module.get_local(1, Type::int_32());
+        let add = module.binary(Op::add_int32(), x, y);
+        let adder = module.add_function("adder", ii, Type::int_32(), vec![], add);
+        //TODO BinaryenSetDebugInfo
+        // module.compile()
+        ""
+    };
+    let size = buffer.len();
+    let compiled = module.compile();
+    println!("size = {:?}\ncompiled = {:?}", compiled.len(), compiled);
+    // std::fs::write("compiled_test", module.compile()).unwrap();
+    module.print();
+    assert!(size > 0);
+    assert!(size < 512);
+}
+
 fn main() {
     println!("You should run with `cargo test` from command line, not `cargo run` :)");
 }
